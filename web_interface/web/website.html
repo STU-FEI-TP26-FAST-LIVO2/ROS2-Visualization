@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <title>ROS2 Visualizer</title>
-  <script src="roslib.min.js"></script>
+  <script src="js/roslib.min.js"></script>
 
   <style>
     body {
@@ -16,7 +16,6 @@
       height: 100vh;
     }
 
-    /* Header */
     header {
       background-color: #111;
       padding: 15px 20px;
@@ -25,14 +24,12 @@
       border-bottom: 1px solid #333;
     }
 
-    /* Main layout */
     .container {
       display: flex;
       flex: 1;
       overflow: hidden;
     }
 
-    /* Sidebar */
     .sidebar {
       width: 250px;
       background-color: #161616;
@@ -40,7 +37,6 @@
       padding: 15px;
     }
 
-    /* Main view area */
     .main-view {
       flex: 1;
       display: flex;
@@ -76,20 +72,25 @@
 
     <div class="sidebar">
       <h3>Menu</h3>
+
+      <h4>Status:</h4>
+      <pre id="output">Čakám na dáta...</pre>
+
     </div>
 
     <div class="main-view">
       <h3>PointCloud View</h3>
 
-      <div class="view-window">
-        <pre id="output">Čakám na dáta...</pre>
+      <div class="view-window" id="viewer">
       </div>
-
     </div>
 
   </div>
 
-  <script>
+  <script type="module">
+    import * as THREE from './js/three.module.js';
+    import { OrbitControls } from './js/OrbitControls.js';
+
     var ros = new ROSLIB.Ros({
       url: 'ws://localhost:9090'
     });
@@ -111,6 +112,95 @@
     listener.subscribe(function(message) {
       document.getElementById('output').textContent = message.data;
     });
+
+    const viewer = document.getElementById("viewer");
+    var scene = new THREE.Scene();
+
+    var camera = new THREE.PerspectiveCamera(
+      75,
+      viewer.clientWidth / viewer.clientHeight,
+      0.1,
+      1000
+    );
+
+    var renderer = new THREE.WebGLRenderer();
+    renderer.setPixelRatio(window.devicePixelRatio);
+
+    renderer.setSize(
+      viewer.clientWidth,
+      viewer.clientHeight
+    );
+
+    viewer.appendChild(renderer.domElement);
+
+    window.addEventListener('resize', () => {
+
+    camera.aspect =
+      viewer.clientWidth /
+      viewer.clientHeight;
+
+    camera.updateProjectionMatrix();
+
+    renderer.setSize(
+      viewer.clientWidth,
+      viewer.clientHeight
+    );
+
+    });
+
+    camera.position.set(5, 5, 5);
+    camera.lookAt(0, 0, 0);
+
+    const controls = new OrbitControls(
+      camera,
+      renderer.domElement
+    );
+
+    controls.enableDamping = true;
+
+    var grid = new THREE.GridHelper(10, 10);
+    scene.add(grid);
+
+    var geometry = new THREE.BufferGeometry();
+
+    var points = [];
+
+    for (let i = 0; i < 2000; i++) {
+
+      let x = (Math.random() - 0.5) * 10;
+      let y = (Math.random() - 0.5) * 10;
+      let z = Math.random() * 2;
+
+      points.push(x, y, z);
+
+    }
+
+    geometry.setAttribute(
+      'position',
+      new THREE.Float32BufferAttribute(points, 3)
+    );
+
+    var material = new THREE.PointsMaterial({
+      size: 0.05,
+      color: 0x00ff88
+    });
+
+    var pointCloud = new THREE.Points(
+      geometry,
+      material
+    );
+
+    scene.add(pointCloud);
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      controls.update();
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
   </script>
 
 </body>
