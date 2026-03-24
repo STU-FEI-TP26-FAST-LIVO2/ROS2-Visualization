@@ -105,12 +105,45 @@
 
     var listener = new ROSLIB.Topic({
       ros: ros,
-      name: '/chatter',
-      messageType: 'std_msgs/msg/String'
+      name: '/lidar_points',
+      messageType: 'sensor_msgs/msg/PointCloud2'
     });
 
     listener.subscribe(function(message) {
-      document.getElementById('output').textContent = message.data;
+
+      if (!message.data) return;
+
+      // decode base64 → binary
+      let binary = atob(message.data);
+
+      let len = binary.length;
+
+      let bytes = new Uint8Array(len);
+
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+
+      let points = [];
+
+      for (let i = 0; i < bytes.length; i += 16) {
+
+        let view = new DataView(bytes.buffer, i);
+
+        let x = view.getFloat32(0, true);
+        let y = view.getFloat32(4, true);
+        let z = view.getFloat32(8, true);
+
+        points.push(
+          x,
+          z,
+          -y
+        );
+
+      }
+
+      updatePointCloud(points);
+
     });
 
     const viewer = document.getElementById("viewer");
@@ -163,21 +196,9 @@
 
     var geometry = new THREE.BufferGeometry();
 
-    var points = [];
-
-    for (let i = 0; i < 2000; i++) {
-
-      let x = (Math.random() - 0.5) * 10;
-      let y = (Math.random() - 0.5) * 10;
-      let z = Math.random() * 2;
-
-      points.push(x, y, z);
-
-    }
-
     geometry.setAttribute(
       'position',
-      new THREE.Float32BufferAttribute(points, 3)
+      new THREE.Float32BufferAttribute([], 3)
     );
 
     var material = new THREE.PointsMaterial({
@@ -198,6 +219,23 @@
       controls.update();
 
       renderer.render(scene, camera);
+    }
+
+    function updatePointCloud(pointsArray) {
+
+      if (pointsArray.length === 0) return;
+
+      const positions = new Float32Array(pointsArray);
+
+      geometry.setAttribute(
+        'position',
+        new THREE.BufferAttribute(positions, 3)
+      );
+
+      geometry.attributes.position.needsUpdate = true;
+
+      geometry.computeBoundingSphere();
+
     }
 
     animate();

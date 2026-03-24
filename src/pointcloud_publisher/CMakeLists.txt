@@ -24,4 +24,19 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
+add_executable(pointcloud_publisher_node
+  src/pointcloud_publisher.cpp)
+
+ament_target_dependencies(
+  pointcloud_publisher_node
+  rclcpp
+  sensor_msgs
+  pcl_ros
+  pcl_conversions
+)
+
+install(TARGETS
+  pointcloud_publisher_node
+  DESTINATION lib/${PROJECT_NAME})
+
 ament_package()
