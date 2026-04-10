@@ -1,245 +1,552 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-  <meta charset="utf-8">
-  <title>ROS2 Visualizer</title>
-  <script src="js/roslib.min.js"></script>
+<meta charset="utf-8">
+<title>ROS2 Visualizer</title>
 
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background-color: #1e1e1e;
-      color: #ffffff;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-    }
+<script src="js/roslib.min.js"></script>
 
-    header {
-      background-color: #111;
-      padding: 15px 20px;
-      font-size: 20px;
-      font-weight: bold;
-      border-bottom: 1px solid #333;
-    }
+<style>
 
-    .container {
-      display: flex;
-      flex: 1;
-      overflow: hidden;
-    }
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background-color: #1e1e1e;
+  color: #ffffff;
+  height: 100vh;
 
-    .sidebar {
-      width: 250px;
-      background-color: #161616;
-      border-right: 1px solid #333;
-      padding: 15px;
-    }
+  display: grid;
+  grid-template-rows: 60px 1fr;
+}
 
-    .main-view {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      padding: 15px;
-    }
+header {
+  background-color: #111;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 
-    .view-window {
-      flex: 1;
-      background-color: #000;
-      border: 1px solid #333;
-      border-radius: 4px;
-      padding: 10px;
-      overflow: auto;
-    }
+  padding: 0 20px;
+  border-bottom: 1px solid #333;
+}
 
-    pre {
-      white-space: pre-wrap;
-      word-wrap: break-word;
-      font-size: 14px;
-      color: #00ff88;
-    }
-  </style>
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 25px;
+  font-weight: bold;
+}
+
+.nav-links {
+  display: flex;
+  gap: 15px;
+}
+
+.nav-link {
+  color: white;
+  text-decoration: none;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.nav-link:hover {
+  color: #00ff88;
+}
+
+.nav-link.active {
+  color: #00ff88;
+  font-weight: bold;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  font-size: 14px;
+  color: #00ff88;
+}
+
+button {
+  background-color: #222;
+  color: white;
+  border: 1px solid #444;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #333;
+}
+
+.container {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  height: 100%;
+}
+
+.sidebar {
+  background-color: #161616;
+  border-right: 1px solid #333;
+
+  padding: 15px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.main-view {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+
+  padding: 10px;
+  gap: 10px;
+}
+
+.left-panels {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  gap: 10px;
+}
+
+.panel {
+  background-color: black;
+  border: 1px solid #333;
+  border-radius: 6px;
+
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-title {
+  background-color: #111;
+  padding: 6px;
+  font-size: 13px;
+  border-bottom: 1px solid #333;
+}
+
+.viewer {
+  flex: 1;
+}
+
+#viewer {
+  width: 100%;
+  height: 100%;
+}
+
+#map-view,
+#camera-view {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#map-view {
+  background-color: #222;
+}
+
+#camera-view {
+  background-color: #400;
+}
+
+#recordings-page {
+  display: none;
+  padding: 20px;
+}
+
+.recording-item {
+  padding: 10px;
+  border-bottom: 1px solid #333;
+  cursor: pointer;
+}
+
+.recording-item:hover {
+  background-color: #333;
+}
+
+</style>
+
 </head>
 
 <body>
 
-  <header>
-    <h1 style="text-align:center;">Multisenzorická odometrická vizualizácia</h1>
-  </header>
+<header>
 
-  <div class="container">
+<div class="header-left">
 
-    <div class="sidebar">
-      <h3>Menu</h3>
+Multisenzorická vizualizácia
 
-      <h4>Status:</h4>
-      <pre id="output">Čakám na dáta...</pre>
+<nav class="nav-links">
 
-    </div>
+<a href="#"
+   id="nav-live"
+   class="nav-link active">
 
-    <div class="main-view">
-      <h3>PointCloud View</h3>
+Live
 
-      <div class="view-window" id="viewer">
-      </div>
-    </div>
+</a>
 
-  </div>
+<a href="#"
+   id="nav-recordings"
+   class="nav-link">
 
-  <script type="module">
-    import * as THREE from './js/three.module.js';
-    import { OrbitControls } from './js/OrbitControls.js';
+Recordings
 
-    var ros = new ROSLIB.Ros({
-      url: 'ws://localhost:9090'
-    });
+</a>
 
-    ros.on('connection', function() {
-      console.log('Connected to rosbridge');
-    });
+</nav>
 
-    ros.on('error', function(error) {
-      console.log('Connection error:', error);
-    });
+</div>
 
-    var listener = new ROSLIB.Topic({
-      ros: ros,
-      name: '/lidar_points',
-      messageType: 'sensor_msgs/msg/PointCloud2'
-    });
+<div class="header-right">
 
-    listener.subscribe(function(message) {
+ROS:
+<span id="ros-status">connecting...</span>
 
-      if (!message.data) return;
+FPS:
+<span id="fps">0</span>
 
-      // decode base64 → binary
-      let binary = atob(message.data);
+<button id="start-record">
+Start Record
+</button>
 
-      let len = binary.length;
+<button id="stop-record">
+Stop Record
+</button>
 
-      let bytes = new Uint8Array(len);
+</div>
 
-      for (let i = 0; i < len; i++) {
-        bytes[i] = binary.charCodeAt(i);
-      }
+</header>
 
-      let points = [];
+<div class="container">
 
-      for (let i = 0; i < bytes.length; i += 16) {
+<div class="sidebar">
 
-        let view = new DataView(bytes.buffer, i);
+<h3>Layers</h3>
 
-        let x = view.getFloat32(0, true);
-        let y = view.getFloat32(4, true);
-        let z = view.getFloat32(8, true);
+<label>
+<input type="checkbox" id="toggle-lidar" checked>
+LiDAR
+</label>
 
-        points.push(
-          x,
-          z,
-          -y
-        );
+<label>
+<input type="checkbox" id="toggle-map" checked>
+Map
+</label>
 
-      }
+<label>
+<input type="checkbox" id="toggle-camera" checked>
+Camera
+</label>
 
-      updatePointCloud(points);
+<label>
+<input type="checkbox" id="toggle-grid" checked>
+Grid
+</label>
 
-    });
+<hr>
 
-    const viewer = document.getElementById("viewer");
-    var scene = new THREE.Scene();
+<h4>Status:</h4>
 
-    var camera = new THREE.PerspectiveCamera(
-      75,
-      viewer.clientWidth / viewer.clientHeight,
-      0.1,
-      1000
-    );
+<pre id="output"></pre>
 
-    var renderer = new THREE.WebGLRenderer();
-    renderer.setPixelRatio(window.devicePixelRatio);
+</div>
 
-    renderer.setSize(
-      viewer.clientWidth,
-      viewer.clientHeight
-    );
+<div id="main-page" class="main-view">
 
-    viewer.appendChild(renderer.domElement);
+<div class="left-panels">
 
-    window.addEventListener('resize', () => {
+<div class="panel">
 
-    camera.aspect =
-      viewer.clientWidth /
-      viewer.clientHeight;
+<div class="panel-title">
+MAP
+</div>
 
-    camera.updateProjectionMatrix();
+<div id="map-view" class="viewer">
+Map preview
+</div>
 
-    renderer.setSize(
-      viewer.clientWidth,
-      viewer.clientHeight
-    );
+</div>
 
-    });
+<div class="panel">
 
-    camera.position.set(5, 5, 5);
-    camera.lookAt(0, 0, 0);
+<div class="panel-title">
+CAMERA
+</div>
 
-    const controls = new OrbitControls(
-      camera,
-      renderer.domElement
-    );
+<div id="camera-view" class="viewer">
+Camera preview
+</div>
 
-    controls.enableDamping = true;
+</div>
 
-    var grid = new THREE.GridHelper(10, 10);
-    scene.add(grid);
+</div>
 
-    var geometry = new THREE.BufferGeometry();
+<div class="panel">
 
-    geometry.setAttribute(
-      'position',
-      new THREE.Float32BufferAttribute([], 3)
-    );
+<div class="panel-title">
+LIDAR
+</div>
 
-    var material = new THREE.PointsMaterial({
-      size: 0.05,
-      color: 0x00ff88
-    });
+<div id="viewer" class="viewer"></div>
 
-    var pointCloud = new THREE.Points(
-      geometry,
-      material
-    );
+</div>
 
-    scene.add(pointCloud);
+</div>
 
-    function animate() {
-      requestAnimationFrame(animate);
+<div id="recordings-page">
 
-      controls.update();
+<h2>Recordings</h2>
 
-      renderer.render(scene, camera);
-    }
+<div class="recording-item">
+Recording_01
+</div>
 
-    function updatePointCloud(pointsArray) {
+<div class="recording-item">
+Recording_02
+</div>
 
-      if (pointsArray.length === 0) return;
+<div class="recording-item">
+Recording_03
+</div>
 
-      const positions = new Float32Array(pointsArray);
+</div>
 
-      geometry.setAttribute(
-        'position',
-        new THREE.BufferAttribute(positions, 3)
-      );
+</div>
 
-      geometry.attributes.position.needsUpdate = true;
+<script type="module">
 
-      geometry.computeBoundingSphere();
+import * as THREE from './js/three.module.js';
+import { OrbitControls } from './js/OrbitControls.js';
 
-    }
+var ros = new ROSLIB.Ros({
+  url: 'ws://localhost:9090'
+});
 
-    animate();
-  </script>
+ros.on('connection', function() {
+
+  document.getElementById("ros-status").textContent = "connected";
+
+  document.getElementById("output").textContent +=
+    "ROS connected\n";
+
+});
+
+ros.on('error', function(error) {
+
+  document.getElementById("ros-status").textContent = "error";
+
+  document.getElementById("output").textContent +=
+    "ROS error\n";
+
+});
+
+var listener = new ROSLIB.Topic({
+  ros: ros,
+  name: '/lidar_points',
+  messageType: 'sensor_msgs/msg/PointCloud2'
+});
+
+const viewer = document.getElementById("viewer");
+
+var scene = new THREE.Scene();
+
+var camera = new THREE.PerspectiveCamera(
+  75,
+  viewer.clientWidth / viewer.clientHeight,
+  0.1,
+  1000
+);
+
+var renderer = new THREE.WebGLRenderer();
+
+renderer.setSize(
+  viewer.clientWidth,
+  viewer.clientHeight
+);
+
+viewer.appendChild(renderer.domElement);
+
+camera.position.set(5,5,5);
+
+const controls = new OrbitControls(
+  camera,
+  renderer.domElement
+);
+
+var grid = new THREE.GridHelper(10,10);
+scene.add(grid);
+
+var geometry = new THREE.BufferGeometry();
+
+geometry.setAttribute(
+  'position',
+  new THREE.Float32BufferAttribute([],3)
+);
+
+var material = new THREE.PointsMaterial({
+  size: 0.05,
+  color: 0x00ff88
+});
+
+var pointCloud = new THREE.Points(
+  geometry,
+  material
+);
+
+scene.add(pointCloud);
+
+listener.subscribe(function(message) {
+
+  if (!message.data) return;
+
+  let binary = atob(message.data);
+  let len = binary.length;
+
+  let bytes = new Uint8Array(len);
+
+  for (let i=0;i<len;i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+
+  let points=[];
+
+  for (let i=0;i<bytes.length;i+=16) {
+
+    let view = new DataView(bytes.buffer,i);
+
+    let x = view.getFloat32(0,true);
+    let y = view.getFloat32(4,true);
+    let z = view.getFloat32(8,true);
+
+    points.push(x,z,-y);
+  }
+
+  updatePointCloud(points);
+
+});
+
+function updatePointCloud(pointsArray){
+
+  if(pointsArray.length===0)return;
+
+  const positions =
+    new Float32Array(pointsArray);
+
+  geometry.setAttribute(
+    'position',
+    new THREE.BufferAttribute(
+      positions,
+      3
+    )
+  );
+
+  geometry.attributes.position.needsUpdate=true;
+
+}
+
+let frameCount=0;
+let lastTime=performance.now();
+
+function animate(){
+
+  requestAnimationFrame(animate);
+
+  frameCount++;
+
+  let now=performance.now();
+
+  if(now-lastTime>1000){
+
+    document.getElementById("fps").textContent=frameCount;
+
+    frameCount=0;
+    lastTime=now;
+  }
+
+  controls.update();
+
+  renderer.render(scene,camera);
+
+}
+
+animate();
+
+document.getElementById("toggle-grid")
+.addEventListener("change",e=>{
+  grid.visible=e.target.checked;
+});
+
+document.getElementById("toggle-lidar")
+.addEventListener("change",e=>{
+  pointCloud.visible=e.target.checked;
+});
+
+document.getElementById("toggle-map")
+.addEventListener("change",e=>{
+  document.getElementById("map-view")
+  .style.display =
+    e.target.checked ? "flex" : "none";
+});
+
+document.getElementById("toggle-camera")
+.addEventListener("change",e=>{
+  document.getElementById("camera-view")
+  .style.display =
+    e.target.checked ? "flex" : "none";
+});
+
+const navLive =
+document.getElementById("nav-live");
+
+const navRecordings =
+document.getElementById("nav-recordings");
+
+navRecordings.onclick = () => {
+
+  document.getElementById("main-page")
+  .style.display = "none";
+
+  document.getElementById("recordings-page")
+  .style.display = "block";
+
+  navRecordings.classList.add("active");
+  navLive.classList.remove("active");
+
+};
+
+navLive.onclick = () => {
+
+  document.getElementById("main-page")
+  .style.display = "grid";
+
+  document.getElementById("recordings-page")
+  .style.display = "none";
+
+  navLive.classList.add("active");
+  navRecordings.classList.remove("active");
+
+};
+
+document.getElementById("start-record")
+.onclick = () => {
+
+  document.getElementById("output")
+  .textContent +=
+    "Recording started\n";
+
+};
+
+document.getElementById("stop-record")
+.onclick = () => {
+
+  document.getElementById("output")
+  .textContent +=
+    "Recording stopped\n";
+
+};
+
+</script>
 
 </body>
 </html>
