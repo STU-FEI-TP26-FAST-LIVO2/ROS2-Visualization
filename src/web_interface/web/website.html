@@ -3,21 +3,43 @@
 
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ROS2 Visualizer</title>
 
 <script src="js/roslib.min.js"></script>
 
 <style>
 
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
 body {
   margin: 0;
   font-family: Arial, sans-serif;
   background-color: #1e1e1e;
   color: #ffffff;
-  height: 100vh;
+
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
 
   display: grid;
-  grid-template-rows: 60px 1fr;
+  grid-template-rows: auto 1fr;
+}
+
+:root {
+  --header-height: 96px;
+}
+
+header {
+  height: var(--header-height);
+  min-height: var(--header-height);
+  box-sizing: border-box;
 }
 
 header {
@@ -28,12 +50,15 @@ header {
 
   padding: 0 20px;
   border-bottom: 1px solid #333;
+
+  position: relative;
+  z-index: 100;
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 25px;
+  gap: 15px;
   font-weight: bold;
 }
 
@@ -78,11 +103,26 @@ button:hover {
   background-color: #333;
 }
 
+/* BURGER */
+
+#burger-btn {
+  display: none;
+  font-size: 22px;
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+}
+
+/* LAYOUT */
+
 .container {
   display: grid;
   grid-template-columns: 260px 1fr;
   height: 100%;
 }
+
+/* SIDEBAR */
 
 .sidebar {
   background-color: #161616;
@@ -95,18 +135,32 @@ button:hover {
   gap: 10px;
 }
 
+/* MOBILE MENU ITEMS */
+
+.mobile-only {
+  display: none;
+}
+
+/* PANELS */
+
 .main-view {
   display: grid;
-  grid-template-columns: 300px 1fr;
-
-  padding: 10px;
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
+  padding: 10px;
+
+  width: 100%;
+  max-width: 100%;
 }
 
 .left-panels {
   display: grid;
-  grid-template-rows: 1fr 1fr;
+  grid-template-rows: auto auto;
   gap: 10px;
+
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .panel {
@@ -116,6 +170,12 @@ button:hover {
 
   display: flex;
   flex-direction: column;
+}
+
+.panel {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .panel-title {
@@ -132,6 +192,9 @@ button:hover {
 #viewer {
   width: 100%;
   height: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
 }
 
 #map-view,
@@ -139,6 +202,13 @@ button:hover {
   display: flex;
   align-items: center;
   justify-content: center;
+
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+
+  overflow: hidden;
+  text-align: center;
 }
 
 #map-view {
@@ -164,6 +234,107 @@ button:hover {
   background-color: #333;
 }
 
+.ros-block {
+  display: flex;
+  align-items: center;
+  color: #00ff88;
+  gap: 5px;
+}
+
+.header-right {
+  flex-wrap: wrap;
+}
+
+/* TABLET */
+
+@media (max-width: 1100px) {
+  .main-view {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* MOBILE */
+
+@media (max-width: 700px) {
+
+  .mobile-only {
+      display: block;
+    }
+
+  header {
+    display: grid;
+    grid-template-rows: auto auto;
+    padding: 6px 8px;
+    gap: 6px;
+  }
+
+  .header-left {
+    justify-content: center;
+  }
+
+  .site-title {
+    width: 100%;
+    text-align: center;
+    font-size: 14px;
+    white-space: nowrap;
+  }
+
+  .nav-links {
+    display: none;
+  }
+
+  .header-right {
+    display: grid;
+    grid-template-columns: auto auto 1fr auto auto;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+  }
+
+  #burger-btn {
+    display: block;
+    font-size: 22px;
+  }
+
+  .ros-block {
+    white-space: nowrap;
+    margin: 0;
+    color: #00ff88;
+  }
+
+  #start-record,
+  #stop-record {
+    font-size: 12px;
+    padding: 6px 8px;
+    white-space: nowrap;
+  }
+
+  .container {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: var(--header-height);
+    left: -280px;
+    width: 260px;
+    height: calc(100vh - var(--header-height));
+    z-index: 1000;
+    transition: left 0.3s ease;
+    overflow-y: auto;
+  }
+
+  .sidebar.open {
+    left: 0;
+  }
+}
+
+.mobile-only .nav-link {
+  display: block;
+  width: 100%;
+  padding: 8px 0;
+}
+
 </style>
 
 </head>
@@ -174,24 +345,20 @@ button:hover {
 
 <div class="header-left">
 
+<span class="site-title">
 Multisenzorická vizualizácia
+</span>
 
 <nav class="nav-links">
 
-<a href="#"
-   id="nav-live"
+<a id="nav-live"
    class="nav-link active">
-
 Live
-
 </a>
 
-<a href="#"
-   id="nav-recordings"
+<a id="nav-recordings"
    class="nav-link">
-
 Recordings
-
 </a>
 
 </nav>
@@ -200,11 +367,16 @@ Recordings
 
 <div class="header-right">
 
+<button id="burger-btn">
+☰
+</button>
+
+<div class="ros-block">
+
 ROS:
 <span id="ros-status">connecting...</span>
 
-FPS:
-<span id="fps">0</span>
+</div>
 
 <button id="start-record">
 Start Record
@@ -221,6 +393,24 @@ Stop Record
 <div class="container">
 
 <div class="sidebar">
+
+<!-- MOBILE MENU -->
+
+<div class="mobile-only">
+
+  <h3>Menu</h3>
+
+  <a id="sidebar-live" class="nav-link">
+    Live
+  </a>
+
+  <a id="sidebar-recordings" class="nav-link">
+    Recordings
+  </a>
+
+  <hr>
+
+</div>
 
 <h3>Layers</h3>
 
@@ -319,35 +509,30 @@ Recording_03
 import * as THREE from './js/three.module.js';
 import { OrbitControls } from './js/OrbitControls.js';
 
+/* ROS */
+
 var ros = new ROSLIB.Ros({
   url: 'ws://localhost:9090'
 });
 
 ros.on('connection', function() {
 
-  document.getElementById("ros-status").textContent = "connected";
-
-  document.getElementById("output").textContent +=
-    "ROS connected\n";
+  document.getElementById("ros-status")
+  .textContent = "connected";
 
 });
 
-ros.on('error', function(error) {
+ros.on('error', function() {
 
-  document.getElementById("ros-status").textContent = "error";
-
-  document.getElementById("output").textContent +=
-    "ROS error\n";
+  document.getElementById("ros-status")
+  .textContent = "error";
 
 });
 
-var listener = new ROSLIB.Topic({
-  ros: ros,
-  name: '/lidar_points',
-  messageType: 'sensor_msgs/msg/PointCloud2'
-});
+/* VIEWER */
 
-const viewer = document.getElementById("viewer");
+const viewer =
+document.getElementById("viewer");
 
 var scene = new THREE.Scene();
 
@@ -358,7 +543,8 @@ var camera = new THREE.PerspectiveCamera(
   1000
 );
 
-var renderer = new THREE.WebGLRenderer();
+var renderer =
+new THREE.WebGLRenderer();
 
 renderer.setSize(
   viewer.clientWidth,
@@ -369,184 +555,137 @@ viewer.appendChild(renderer.domElement);
 
 camera.position.set(5,5,5);
 
-const controls = new OrbitControls(
-  camera,
-  renderer.domElement
-);
+const controls =
+new OrbitControls(camera, renderer.domElement);
 
-var grid = new THREE.GridHelper(10,10);
+var grid =
+new THREE.GridHelper(10,10);
+
 scene.add(grid);
 
-var geometry = new THREE.BufferGeometry();
-
-geometry.setAttribute(
-  'position',
-  new THREE.Float32BufferAttribute([],3)
-);
-
-var material = new THREE.PointsMaterial({
-  size: 0.05,
-  color: 0x00ff88
+document
+.getElementById("toggle-grid")
+.addEventListener("change", e => {
+  grid.visible = e.target.checked;
 });
 
-var pointCloud = new THREE.Points(
-  geometry,
-  material
-);
+document
+.getElementById("toggle-map")
+.addEventListener("change", e => {
 
-scene.add(pointCloud);
-
-listener.subscribe(function(message) {
-
-  if (!message.data) return;
-
-  let binary = atob(message.data);
-  let len = binary.length;
-
-  let bytes = new Uint8Array(len);
-
-  for (let i=0;i<len;i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-
-  let points=[];
-
-  for (let i=0;i<bytes.length;i+=16) {
-
-    let view = new DataView(bytes.buffer,i);
-
-    let x = view.getFloat32(0,true);
-    let y = view.getFloat32(4,true);
-    let z = view.getFloat32(8,true);
-
-    points.push(x,z,-y);
-  }
-
-  updatePointCloud(points);
-
-});
-
-function updatePointCloud(pointsArray){
-
-  if(pointsArray.length===0)return;
-
-  const positions =
-    new Float32Array(pointsArray);
-
-  geometry.setAttribute(
-    'position',
-    new THREE.BufferAttribute(
-      positions,
-      3
-    )
-  );
-
-  geometry.attributes.position.needsUpdate=true;
-
-}
-
-let frameCount=0;
-let lastTime=performance.now();
-
-function animate(){
-
-  requestAnimationFrame(animate);
-
-  frameCount++;
-
-  let now=performance.now();
-
-  if(now-lastTime>1000){
-
-    document.getElementById("fps").textContent=frameCount;
-
-    frameCount=0;
-    lastTime=now;
-  }
-
-  controls.update();
-
-  renderer.render(scene,camera);
-
-}
-
-animate();
-
-document.getElementById("toggle-grid")
-.addEventListener("change",e=>{
-  grid.visible=e.target.checked;
-});
-
-document.getElementById("toggle-lidar")
-.addEventListener("change",e=>{
-  pointCloud.visible=e.target.checked;
-});
-
-document.getElementById("toggle-map")
-.addEventListener("change",e=>{
   document.getElementById("map-view")
-  .style.display =
-    e.target.checked ? "flex" : "none";
+  .style.display = e.target.checked
+    ? "flex"
+    : "none";
 });
 
-document.getElementById("toggle-camera")
-.addEventListener("change",e=>{
+document
+.getElementById("toggle-camera")
+.addEventListener("change", e => {
+
   document.getElementById("camera-view")
-  .style.display =
-    e.target.checked ? "flex" : "none";
+  .style.display = e.target.checked
+    ? "flex"
+    : "none";
 });
 
-const navLive =
-document.getElementById("nav-live");
+document
+.getElementById("toggle-lidar")
+.addEventListener("change", e => {
 
-const navRecordings =
-document.getElementById("nav-recordings");
+  document.getElementById("viewer")
+  .style.display = e.target.checked
+    ? "block"
+    : "none";
+});
 
-navRecordings.onclick = () => {
+/* BURGER */
+
+const burgerBtn =
+document.getElementById("burger-btn");
+
+const sidebar =
+document.querySelector(".sidebar");
+
+burgerBtn.onclick = () => {
+
+  console.log("burger clicked");
+
+  sidebar.classList.toggle("open");
+
+};
+
+/* PAGE SWITCH */
+
+function showLive(){
 
   document.getElementById("main-page")
-  .style.display = "none";
+  .style.display="grid";
 
   document.getElementById("recordings-page")
-  .style.display = "block";
+  .style.display="none";
 
-  navRecordings.classList.add("active");
-  navLive.classList.remove("active");
+  sidebar.classList.remove("open");
 
-};
+}
 
-navLive.onclick = () => {
+function showRecordings(){
 
   document.getElementById("main-page")
-  .style.display = "grid";
+  .style.display="none";
 
   document.getElementById("recordings-page")
-  .style.display = "none";
+  .style.display="block";
 
-  navLive.classList.add("active");
-  navRecordings.classList.remove("active");
+  sidebar.classList.remove("open");
 
-};
+}
 
-document.getElementById("start-record")
-.onclick = () => {
+/* HEADER */
 
-  document.getElementById("output")
-  .textContent +=
-    "Recording started\n";
+document
+.getElementById("nav-live")
+.onclick = showLive;
 
-};
+document
+.getElementById("nav-recordings")
+.onclick = showRecordings;
 
-document.getElementById("stop-record")
-.onclick = () => {
+/* SIDEBAR MOBILE */
 
-  document.getElementById("output")
-  .textContent +=
-    "Recording stopped\n";
+document
+.getElementById("sidebar-live")
+.onclick = showLive;
 
-};
+document
+.getElementById("sidebar-recordings")
+.onclick = showRecordings;
+
+/* SYNC ROS STATUS */
+
+function syncStatus(){
+
+  document.getElementById("sidebar-ros")
+  .textContent =
+  document.getElementById("ros-status")
+  .textContent;
+
+}
+
+setInterval(syncStatus,500);
+
+window.addEventListener("resize", () => {
+
+  const w = viewer.clientWidth;
+  const h = viewer.clientHeight;
+
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+});
 
 </script>
 
 </body>
+
 </html>
