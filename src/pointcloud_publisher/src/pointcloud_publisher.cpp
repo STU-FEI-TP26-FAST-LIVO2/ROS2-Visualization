@@ -1,144 +1,71 @@
+#include <memory>
+#include <functional>
+
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
-#include <sensor_msgs/point_cloud2_iterator.hpp>
 
-#include <fstream>
-#include <vector>
-#include <iomanip>
-#include <sstream>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include <pcl/filters/voxel_grid.h>
+#include <pcl_conversions/pcl_conversions.h>
 
 class PointCloudPublisher : public rclcpp::Node
 {
 public:
     PointCloudPublisher()
-    : Node("pointcloud_publisher"),
-      frame_index_(0)
+    : Node("pointcloud_publisher")
     {
-        publisher_ =
-            this->create_publisher<
-            sensor_msgs::msg::PointCloud2>(
-                "/lidar_points", 10);
+        publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
+            "/lidar_points", 10);
 
-        timer_ =
-            this->create_wall_timer(
-                std::chrono::milliseconds(200),
-                std::bind(
-                    &PointCloudPublisher::timerCallback,
-                    this));
+        subscription_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
+            "/hesai/pandar",
+            10,
+            std::bind(&PointCloudPublisher::pointCloudCallback, this, std::placeholders::_1));
 
-        dataset_path_ =
-        "/home/dominika/ROS2-Visualization/dataset/kitti/velodyne/sequences/05/velodyne/";
-
-        RCLCPP_INFO(
-            this->get_logger(),
-            "Sequential PointCloud publisher started");
+        RCLCPP_INFO(this->get_logger(), "PointCloud downsampling republisher started");
+        RCLCPP_INFO(this->get_logger(), "Subscribed topic: /hesai/pandar");
+        RCLCPP_INFO(this->get_logger(), "Publishing topic: /lidar_points");
     }
 
 private:
-
-    void timerCallback()
+    void pointCloudCallback(const sensor_msgs::msg::PointCloud2::SharedPtr msg)
     {
-        std::stringstream ss;
+        pcl::PointCloud<pcl::PointXYZI>::Ptr input_cloud(new pcl::PointCloud<pcl::PointXYZI>());
+        pcl::fromROSMsg(*msg, *input_cloud);
 
-        ss << dataset_path_
-           << std::setw(6)
-           << std::setfill('0')
-           << frame_index_
-           << ".bin";
+        pcl::PointCloud<pcl::PointXYZI>::Ptr filtered_cloud(new pcl::PointCloud<pcl::PointXYZI>());
 
-        std::string file_path = ss.str();
+        pcl::VoxelGrid<pcl::PointXYZI> voxel_filter;
+        voxel_filter.setInputCloud(input_cloud);
+        voxel_filter.setLeafSize(0.2f, 0.2f, 0.2f);
+        voxel_filter.filter(*filtered_cloud);
 
-        std::ifstream file(
-            file_path,
-            std::ios::binary);
+        sensor_msgs::msg::PointCloud2 output_cloud;
+        pcl::toROSMsg(*filtered_cloud, output_cloud);
 
-        if (!file.is_open()) {
+        output_cloud.header = msg->header;
 
-            RCLCPP_WARN(
-                this->get_logger(),
-                "End of dataset reached");
+        publisher_->publish(output_cloud);
 
-            frame_index_ = 0;
-            return;
-        }
-
-        std::vector<float> points;
-
-        float x, y, z, intensity;
-
-        while (file.read((char*)&x, sizeof(float)) &&
-               file.read((char*)&y, sizeof(float)) &&
-               file.read((char*)&z, sizeof(float)) &&
-               file.read((char*)&intensity, sizeof(float)))
-        {
-            points.push_back(x);
-            points.push_back(y);
-            points.push_back(z);
-        }
-
-        file.close();
-
-        sensor_msgs::msg::PointCloud2 cloud;
-
-        cloud.header.frame_id = "map";
-        cloud.header.stamp =
-            this->get_clock()->now();
-
-        cloud.height = 1;
-        cloud.width = points.size() / 3;
-
-        sensor_msgs::PointCloud2Modifier modifier(cloud);
-
-        modifier.setPointCloud2FieldsByString(
-            1, "xyz");
-
-        modifier.resize(cloud.width);
-
-        sensor_msgs::PointCloud2Iterator<float>
-            iter_x(cloud, "x");
-
-        for (size_t i = 0;
-             i < points.size();
-             i += 3)
-        {
-            iter_x[0] = points[i];
-            iter_x[1] = points[i+1];
-            iter_x[2] = points[i+2];
-
-            ++iter_x;
-        }
-
-        publisher_->publish(cloud);
-
-        RCLCPP_INFO(
+        RCLCPP_INFO_THROTTLE(
             this->get_logger(),
-            "Frame %d (%u points)",
-            frame_index_,
-            cloud.width);
-
-        frame_index_++;
+            *this->get_clock(),
+            2000,
+            "Input points: %zu, Filtered points: %zu",
+            input_cloud->points.size(),
+            filtered_cloud->points.size());
     }
 
-    std::string dataset_path_;
-
-    int frame_index_;
-
-    rclcpp::Publisher<
-        sensor_msgs::msg::PointCloud2>::SharedPtr publisher_;
-
-    rclcpp::TimerBase::SharedPtr timer_;
+    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr publisher_;
+    rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr subscription_;
 };
 
 int main(int argc, char ** argv)
 {
     rclcpp::init(argc, argv);
-
-    auto node =
-        std::make_shared<PointCloudPublisher>();
-
+    auto node = std::make_shared<PointCloudPublisher>();
     rclcpp::spin(node);
-
     rclcpp::shutdown();
-
     return 0;
 }

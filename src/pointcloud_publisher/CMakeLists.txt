@@ -11,6 +11,12 @@ find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(pcl_ros REQUIRED)
 find_package(pcl_conversions REQUIRED)
+find_package(cv_bridge REQUIRED)
+find_package(OpenCV REQUIRED)
+find_package(PCL REQUIRED)
+find_package(Eigen3 REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -35,8 +41,56 @@ ament_target_dependencies(
   pcl_conversions
 )
 
+
+add_executable(camera_publisher_node src/camera_publisher.cpp)
+
+ament_target_dependencies(camera_publisher_node
+  rclcpp
+  sensor_msgs
+  cv_bridge
+)
+
+target_link_libraries(camera_publisher_node
+  ${OpenCV_LIBRARIES}
+)
+
+add_executable(map_builder_node
+  src/map_builder.cpp
+)
+
+ament_target_dependencies(
+  map_builder_node
+  rclcpp
+  sensor_msgs
+  pcl_ros
+  pcl_conversions
+)
+
+target_include_directories(map_builder_node PUBLIC
+  ${PCL_INCLUDE_DIRS}
+)
+
+target_link_libraries(map_builder_node
+  ${PCL_LIBRARIES}
+)
+
+add_executable(system_controller_node
+  src/system_controller.cpp
+)
+
+ament_target_dependencies(
+  system_controller_node
+  rclcpp
+  std_msgs
+  std_srvs
+)
+
 install(TARGETS
   pointcloud_publisher_node
-  DESTINATION lib/${PROJECT_NAME})
+  camera_publisher_node
+  map_builder_node
+  system_controller_node
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 ament_package()

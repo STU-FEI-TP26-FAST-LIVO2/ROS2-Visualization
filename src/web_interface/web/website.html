@@ -10,7 +10,6 @@
 
 <style>
 
-
 *,
 *::before,
 *::after {
@@ -23,11 +22,9 @@ body {
   font-family: Arial, sans-serif;
   background-color: #1e1e1e;
   color: #ffffff;
-
   min-height: 100vh;
   width: 100%;
   overflow-x: hidden;
-
   display: grid;
   grid-template-rows: auto 1fr;
 }
@@ -40,17 +37,12 @@ header {
   height: var(--header-height);
   min-height: var(--header-height);
   box-sizing: border-box;
-}
-
-header {
   background-color: #111;
   display: flex;
   justify-content: space-between;
   align-items: center;
-
   padding: 0 20px;
   border-bottom: 1px solid #333;
-
   position: relative;
   z-index: 100;
 }
@@ -89,6 +81,7 @@ header {
   gap: 15px;
   font-size: 14px;
   color: #00ff88;
+  flex-wrap: wrap;
 }
 
 button {
@@ -103,8 +96,6 @@ button:hover {
   background-color: #333;
 }
 
-/* BURGER */
-
 #burger-btn {
   display: none;
   font-size: 22px;
@@ -114,41 +105,30 @@ button:hover {
   cursor: pointer;
 }
 
-/* LAYOUT */
-
 .container {
   display: grid;
   grid-template-columns: 260px 1fr;
   height: 100%;
 }
 
-/* SIDEBAR */
-
 .sidebar {
   background-color: #161616;
   border-right: 1px solid #333;
-
   padding: 15px;
-
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-/* MOBILE MENU ITEMS */
-
 .mobile-only {
   display: none;
 }
-
-/* PANELS */
 
 .main-view {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 10px;
   padding: 10px;
-
   width: 100%;
   max-width: 100%;
 }
@@ -157,7 +137,6 @@ button:hover {
   display: grid;
   grid-template-rows: auto auto;
   gap: 10px;
-
   width: 100%;
   max-width: 100%;
   min-width: 0;
@@ -167,12 +146,8 @@ button:hover {
   background-color: black;
   border: 1px solid #333;
   border-radius: 6px;
-
   display: flex;
   flex-direction: column;
-}
-
-.panel {
   width: 100%;
   max-width: 100%;
   min-width: 0;
@@ -187,36 +162,56 @@ button:hover {
 
 .viewer {
   flex: 1;
+  min-height: 300px;
 }
 
-#viewer {
+#viewer,
+#map-view {
   width: 100%;
   height: 100%;
   max-width: 100%;
   min-width: 0;
   overflow: hidden;
+  position: relative;
 }
 
-#map-view,
+#viewer canvas,
+#map-view canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+#viewer canvas:active,
+#map-view canvas:active {
+  cursor: grabbing;
+}
+
 #camera-view {
   display: flex;
   align-items: center;
   justify-content: center;
-
   width: 100%;
   max-width: 100%;
   min-width: 0;
-
   overflow: hidden;
   text-align: center;
+  background-color: #111;
+  position: relative;
 }
 
-#map-view {
-  background-color: #222;
+#camera-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: none;
 }
 
-#camera-view {
-  background-color: #400;
+#camera-placeholder {
+  position: absolute;
+  color: #aaa;
+  font-size: 14px;
 }
 
 #recordings-page {
@@ -241,25 +236,17 @@ button:hover {
   gap: 5px;
 }
 
-.header-right {
-  flex-wrap: wrap;
-}
-
-/* TABLET */
-
 @media (max-width: 1100px) {
   .main-view {
     grid-template-columns: 1fr;
   }
 }
 
-/* MOBILE */
-
 @media (max-width: 700px) {
 
   .mobile-only {
-      display: block;
-    }
+    display: block;
+  }
 
   header {
     display: grid;
@@ -344,48 +331,24 @@ button:hover {
 <header>
 
 <div class="header-left">
-
-<span class="site-title">
-Multisenzorická vizualizácia
-</span>
+<span class="site-title">Multisenzorická vizualizácia</span>
 
 <nav class="nav-links">
-
-<a id="nav-live"
-   class="nav-link active">
-Live
-</a>
-
-<a id="nav-recordings"
-   class="nav-link">
-Recordings
-</a>
-
+<a id="nav-live" class="nav-link active">Live</a>
+<a id="nav-recordings" class="nav-link">Recordings</a>
 </nav>
-
 </div>
 
 <div class="header-right">
-
-<button id="burger-btn">
-☰
-</button>
+<button id="burger-btn">☰</button>
 
 <div class="ros-block">
-
 ROS:
 <span id="ros-status">connecting...</span>
-
 </div>
 
-<button id="start-record">
-Start Record
-</button>
-
-<button id="stop-record">
-Stop Record
-</button>
-
+<button id="start-record">Start Record</button>
+<button id="stop-record">Stop Record</button>
 </div>
 
 </header>
@@ -394,51 +357,24 @@ Stop Record
 
 <div class="sidebar">
 
-<!-- MOBILE MENU -->
-
 <div class="mobile-only">
-
   <h3>Menu</h3>
-
-  <a id="sidebar-live" class="nav-link">
-    Live
-  </a>
-
-  <a id="sidebar-recordings" class="nav-link">
-    Recordings
-  </a>
-
+  <a id="sidebar-live" class="nav-link">Live</a>
+  <a id="sidebar-recordings" class="nav-link">Recordings</a>
   <hr>
-
 </div>
 
 <h3>Layers</h3>
 
-<label>
-<input type="checkbox" id="toggle-lidar" checked>
-LiDAR
-</label>
-
-<label>
-<input type="checkbox" id="toggle-map" checked>
-Map
-</label>
-
-<label>
-<input type="checkbox" id="toggle-camera" checked>
-Camera
-</label>
-
-<label>
-<input type="checkbox" id="toggle-grid" checked>
-Grid
-</label>
+<label><input type="checkbox" id="toggle-lidar" checked> LiDAR</label>
+<label><input type="checkbox" id="toggle-map" checked> Map</label>
+<label><input type="checkbox" id="toggle-camera" checked> Camera</label>
+<label><input type="checkbox" id="toggle-grid" checked> Grid</label>
 
 <hr>
 
 <h4>Status:</h4>
-
-<pre id="output"></pre>
+<pre id="output">Waiting for LiDAR, map and camera...</pre>
 
 </div>
 
@@ -447,245 +383,478 @@ Grid
 <div class="left-panels">
 
 <div class="panel">
-
-<div class="panel-title">
-MAP
-</div>
-
-<div id="map-view" class="viewer">
-Map preview
-</div>
-
+<div class="panel-title">MAP</div>
+<div id="map-view" class="viewer"></div>
 </div>
 
 <div class="panel">
-
-<div class="panel-title">
-CAMERA
-</div>
-
+<div class="panel-title">CAMERA</div>
 <div id="camera-view" class="viewer">
-Camera preview
+  <img id="camera-image" alt="Camera stream">
+  <div id="camera-placeholder">Camera preview</div>
 </div>
-
 </div>
 
 </div>
 
 <div class="panel">
-
-<div class="panel-title">
-LIDAR
-</div>
-
+<div class="panel-title">LIDAR</div>
 <div id="viewer" class="viewer"></div>
-
 </div>
 
 </div>
 
 <div id="recordings-page">
-
 <h2>Recordings</h2>
-
-<div class="recording-item">
-Recording_01
-</div>
-
-<div class="recording-item">
-Recording_02
-</div>
-
-<div class="recording-item">
-Recording_03
-</div>
-
+<div class="recording-item">Recording_01</div>
+<div class="recording-item">Recording_02</div>
+<div class="recording-item">Recording_03</div>
 </div>
 
 </div>
 
 <script type="module">
-
 import * as THREE from './js/three.module.js';
 import { OrbitControls } from './js/OrbitControls.js';
 
 /* ROS */
 
-var ros = new ROSLIB.Ros({
+const ros = new ROSLIB.Ros({
   url: 'ws://localhost:9090'
 });
 
+const rosStatus = document.getElementById("ros-status");
+const output = document.getElementById("output");
+const cameraImage = document.getElementById("camera-image");
+const cameraPlaceholder = document.getElementById("camera-placeholder");
+const startButton = document.getElementById("start-record");
+const stopButton = document.getElementById("stop-record");
+
+let lidarPointCount = 0;
+let mapPointCount = 0;
+let cameraFrameReceived = false;
+let systemState = "idle";
+
+function updateStatus(extraMessage = "") {
+  output.textContent =
+    `ROS: ${rosStatus.textContent}\n` +
+    `System: ${systemState}\n` +
+    `LiDAR topic: /lidar_points\n` +
+    `LiDAR points: ${lidarPointCount}\n` +
+    `Map topic: /map_points\n` +
+    `Map points: ${mapPointCount}\n` +
+    `Camera topic: /camera_image/compressed\n` +
+    `Camera: ${cameraFrameReceived ? "receiving" : "waiting"}` +
+    (extraMessage ? `\n${extraMessage}` : "");
+}
+
 ros.on('connection', function() {
-
-  document.getElementById("ros-status")
-  .textContent = "connected";
-
+  rosStatus.textContent = "connected";
+  updateStatus();
 });
 
-ros.on('error', function() {
-
-  document.getElementById("ros-status")
-  .textContent = "error";
-
+ros.on('error', function(error) {
+  rosStatus.textContent = "error";
+  console.error("ROS connection error:", error);
+  updateStatus("ROS connection error");
 });
 
-/* VIEWER */
+ros.on('close', function() {
+  rosStatus.textContent = "closed";
+  updateStatus("ROS connection closed");
+});
 
-const viewer =
-document.getElementById("viewer");
+/* Services */
 
-var scene = new THREE.Scene();
+const startService = new ROSLIB.Service({
+  ros: ros,
+  name: '/start_system',
+  serviceType: 'std_srvs/srv/Trigger'
+});
 
-var camera = new THREE.PerspectiveCamera(
+const stopService = new ROSLIB.Service({
+  ros: ros,
+  name: '/stop_system',
+  serviceType: 'std_srvs/srv/Trigger'
+});
+
+startButton.addEventListener("click", () => {
+  const request = new ROSLIB.ServiceRequest({});
+
+  updateStatus("Calling /start_system ...");
+  console.log("Calling /start_system ...");
+
+  startService.callService(
+    request,
+    function(result) {
+      console.log("Start response:", result);
+      updateStatus(`START: ${result.message}`);
+    },
+    function(error) {
+      console.error("Start service failed:", error);
+      updateStatus("START ERROR");
+    }
+  );
+});
+
+stopButton.addEventListener("click", () => {
+  const request = new ROSLIB.ServiceRequest({});
+
+  updateStatus("Calling /stop_system ...");
+  console.log("Calling /stop_system ...");
+
+  stopService.callService(
+    request,
+    function(result) {
+      console.log("Stop response:", result);
+      updateStatus(`STOP: ${result.message}`);
+    },
+    function(error) {
+      console.error("Stop service failed:", error);
+      updateStatus("STOP ERROR");
+    }
+  );
+});
+
+/* UI status subscriber */
+
+const uiStatusTopic = new ROSLIB.Topic({
+  ros: ros,
+  name: '/ui/status',
+  messageType: 'std_msgs/msg/String'
+});
+
+uiStatusTopic.subscribe(function(message) {
+  systemState = message.data;
+  updateStatus();
+});
+
+/* Shared helper */
+
+function getFieldOffset(fields, fieldName) {
+  const field = fields.find(f => f.name === fieldName);
+  return field ? field.offset : null;
+}
+
+function decodePointCloud2(message) {
+  if (!message.data || !message.fields || !message.point_step) {
+    return [];
+  }
+
+  const xOffset = getFieldOffset(message.fields, "x");
+  const yOffset = getFieldOffset(message.fields, "y");
+  const zOffset = getFieldOffset(message.fields, "z");
+
+  if (xOffset === null || yOffset === null || zOffset === null) {
+    return [];
+  }
+
+  let rawData;
+
+  if (typeof message.data === "string") {
+    const binary = atob(message.data);
+    rawData = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      rawData[i] = binary.charCodeAt(i);
+    }
+  } else {
+    rawData = new Uint8Array(message.data);
+  }
+
+  const dv = new DataView(rawData.buffer);
+  const points = [];
+
+  for (let i = 0; i + message.point_step <= rawData.length; i += message.point_step) {
+    const x = dv.getFloat32(i + xOffset, true);
+    const y = dv.getFloat32(i + yOffset, true);
+    const z = dv.getFloat32(i + zOffset, true);
+
+    if (Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(z)) {
+      points.push(x, z, -y);
+    }
+  }
+
+  return points;
+}
+
+/* LIDAR VIEWER */
+
+const viewer = document.getElementById("viewer");
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x000000);
+
+const camera = new THREE.PerspectiveCamera(
   75,
   viewer.clientWidth / viewer.clientHeight,
   0.1,
   1000
 );
 
-var renderer =
-new THREE.WebGLRenderer();
-
-renderer.setSize(
-  viewer.clientWidth,
-  viewer.clientHeight
-);
-
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(viewer.clientWidth, viewer.clientHeight);
+renderer.domElement.style.touchAction = "none";
 viewer.appendChild(renderer.domElement);
+viewer.addEventListener("contextmenu", (e) => e.preventDefault());
 
-camera.position.set(5,5,5);
+camera.position.set(0, 12, 22);
 
-const controls =
-new OrbitControls(camera, renderer.domElement);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.enableZoom = true;
+controls.enableRotate = true;
+controls.enablePan = true;
+controls.minDistance = 1;
+controls.maxDistance = 200;
+controls.target.set(0, 0, 0);
+controls.update();
 
-var grid =
-new THREE.GridHelper(10,10);
-
+const grid = new THREE.GridHelper(20, 20);
 scene.add(grid);
 
-document
-.getElementById("toggle-grid")
-.addEventListener("change", e => {
+const axes = new THREE.AxesHelper(2);
+scene.add(axes);
+
+let currentCloud = null;
+
+/* MAP VIEWER */
+
+const mapViewer = document.getElementById("map-view");
+const mapScene = new THREE.Scene();
+mapScene.background = new THREE.Color(0x111111);
+
+const mapCamera = new THREE.PerspectiveCamera(
+  75,
+  mapViewer.clientWidth / mapViewer.clientHeight,
+  0.1,
+  2000
+);
+
+const mapRenderer = new THREE.WebGLRenderer({ antialias: true });
+mapRenderer.setSize(mapViewer.clientWidth, mapViewer.clientHeight);
+mapRenderer.domElement.style.touchAction = "none";
+mapViewer.appendChild(mapRenderer.domElement);
+mapViewer.addEventListener("contextmenu", (e) => e.preventDefault());
+
+mapCamera.position.set(0, 20, 35);
+
+const mapControls = new OrbitControls(mapCamera, mapRenderer.domElement);
+mapControls.enableDamping = true;
+mapControls.dampingFactor = 0.08;
+mapControls.enableZoom = true;
+mapControls.enableRotate = true;
+mapControls.enablePan = true;
+mapControls.minDistance = 1;
+mapControls.maxDistance = 500;
+mapControls.target.set(0, 0, 0);
+mapControls.update();
+
+const mapGrid = new THREE.GridHelper(40, 40);
+mapScene.add(mapGrid);
+
+const mapAxes = new THREE.AxesHelper(2);
+mapScene.add(mapAxes);
+
+let currentMapCloud = null;
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  controls.update();
+  renderer.render(scene, camera);
+
+  mapControls.update();
+  mapRenderer.render(mapScene, mapCamera);
+}
+animate();
+
+/* UI toggles */
+
+document.getElementById("toggle-grid").addEventListener("change", e => {
   grid.visible = e.target.checked;
+  mapGrid.visible = e.target.checked;
 });
 
-document
-.getElementById("toggle-map")
-.addEventListener("change", e => {
-
-  document.getElementById("map-view")
-  .style.display = e.target.checked
-    ? "flex"
-    : "none";
+document.getElementById("toggle-map").addEventListener("change", e => {
+  document.getElementById("map-view").style.display =
+    e.target.checked ? "block" : "none";
 });
 
-document
-.getElementById("toggle-camera")
-.addEventListener("change", e => {
-
-  document.getElementById("camera-view")
-  .style.display = e.target.checked
-    ? "flex"
-    : "none";
+document.getElementById("toggle-camera").addEventListener("change", e => {
+  document.getElementById("camera-view").style.display =
+    e.target.checked ? "flex" : "none";
 });
 
-document
-.getElementById("toggle-lidar")
-.addEventListener("change", e => {
-
-  document.getElementById("viewer")
-  .style.display = e.target.checked
-    ? "block"
-    : "none";
+document.getElementById("toggle-lidar").addEventListener("change", e => {
+  document.getElementById("viewer").style.display =
+    e.target.checked ? "block" : "none";
 });
 
 /* BURGER */
 
-const burgerBtn =
-document.getElementById("burger-btn");
-
-const sidebar =
-document.querySelector(".sidebar");
+const burgerBtn = document.getElementById("burger-btn");
+const sidebar = document.querySelector(".sidebar");
 
 burgerBtn.onclick = () => {
-
-  console.log("burger clicked");
-
   sidebar.classList.toggle("open");
-
 };
 
 /* PAGE SWITCH */
 
-function showLive(){
-
-  document.getElementById("main-page")
-  .style.display="grid";
-
-  document.getElementById("recordings-page")
-  .style.display="none";
-
+function showLive() {
+  document.getElementById("main-page").style.display = "grid";
+  document.getElementById("recordings-page").style.display = "none";
   sidebar.classList.remove("open");
-
 }
 
-function showRecordings(){
-
-  document.getElementById("main-page")
-  .style.display="none";
-
-  document.getElementById("recordings-page")
-  .style.display="block";
-
+function showRecordings() {
+  document.getElementById("main-page").style.display = "none";
+  document.getElementById("recordings-page").style.display = "block";
   sidebar.classList.remove("open");
-
 }
 
-/* HEADER */
+document.getElementById("nav-live").onclick = showLive;
+document.getElementById("nav-recordings").onclick = showRecordings;
+document.getElementById("sidebar-live").onclick = showLive;
+document.getElementById("sidebar-recordings").onclick = showRecordings;
 
-document
-.getElementById("nav-live")
-.onclick = showLive;
-
-document
-.getElementById("nav-recordings")
-.onclick = showRecordings;
-
-/* SIDEBAR MOBILE */
-
-document
-.getElementById("sidebar-live")
-.onclick = showLive;
-
-document
-.getElementById("sidebar-recordings")
-.onclick = showRecordings;
-
-/* SYNC ROS STATUS */
-
-function syncStatus(){
-
-  document.getElementById("sidebar-ros")
-  .textContent =
-  document.getElementById("ros-status")
-  .textContent;
-
-}
-
-setInterval(syncStatus,500);
+/* Resize */
 
 window.addEventListener("resize", () => {
-
-  const w = viewer.clientWidth;
-  const h = viewer.clientHeight;
+  const w = viewer.clientWidth || 1;
+  const h = viewer.clientHeight || 1;
 
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
   renderer.setSize(w, h);
+
+  const mw = mapViewer.clientWidth || 1;
+  const mh = mapViewer.clientHeight || 1;
+
+  mapCamera.aspect = mw / mh;
+  mapCamera.updateProjectionMatrix();
+  mapRenderer.setSize(mw, mh);
 });
 
+/* LiDAR subscriber */
+
+const lidarTopic = new ROSLIB.Topic({
+  ros: ros,
+  name: '/lidar_points',
+  messageType: 'sensor_msgs/msg/PointCloud2'
+});
+
+lidarTopic.subscribe(function(message) {
+  const points = decodePointCloud2(message);
+
+  if (points.length === 0) {
+    return;
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute(
+    'position',
+    new THREE.Float32BufferAttribute(points, 3)
+  );
+
+  const material = new THREE.PointsMaterial({
+    size: 0.06
+  });
+
+  const cloud = new THREE.Points(geometry, material);
+
+  if (currentCloud) {
+    scene.remove(currentCloud);
+    currentCloud.geometry.dispose();
+    currentCloud.material.dispose();
+  }
+
+  currentCloud = cloud;
+  scene.add(currentCloud);
+
+  lidarPointCount = points.length / 3;
+  updateStatus();
+});
+
+/* MAP subscriber */
+
+const mapTopic = new ROSLIB.Topic({
+  ros: ros,
+  name: '/map_points',
+  messageType: 'sensor_msgs/msg/PointCloud2'
+});
+
+mapTopic.subscribe(function(message) {
+  const points = decodePointCloud2(message);
+
+  if (points.length === 0) {
+    return;
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute(
+    'position',
+    new THREE.Float32BufferAttribute(points, 3)
+  );
+
+  const material = new THREE.PointsMaterial({
+    size: 0.04
+  });
+
+  const cloud = new THREE.Points(geometry, material);
+
+  if (currentMapCloud) {
+    mapScene.remove(currentMapCloud);
+    currentMapCloud.geometry.dispose();
+    currentMapCloud.material.dispose();
+  }
+
+  currentMapCloud = cloud;
+  mapScene.add(currentMapCloud);
+
+  mapPointCount = points.length / 3;
+  updateStatus();
+});
+
+/* Camera subscriber */
+
+const cameraTopic = new ROSLIB.Topic({
+  ros: ros,
+  name: '/camera_image/compressed',
+  messageType: 'sensor_msgs/msg/CompressedImage'
+});
+
+cameraTopic.subscribe(function(message) {
+  if (!message.data) {
+    return;
+  }
+
+  let imageSrc = "";
+
+  if (typeof message.data === "string") {
+    imageSrc = "data:image/jpeg;base64," + message.data;
+  } else {
+    let binary = "";
+    const bytes = new Uint8Array(message.data);
+    const len = bytes.byteLength;
+
+    for (let i = 0; i < len; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+
+    imageSrc = "data:image/jpeg;base64," + btoa(binary);
+  }
+
+  cameraImage.src = imageSrc;
+  cameraImage.style.display = "block";
+  cameraPlaceholder.style.display = "none";
+
+  cameraFrameReceived = true;
+  updateStatus();
+});
+
+updateStatus();
 </script>
 
 </body>
-
 </html>
