@@ -5,3 +5,7 @@ dataset/
 __pycache__/
 *.pyc
 .vscode/exp14_converted/
+recordings/
+exp14_converted/
+*.db3
+*.sqlite3
