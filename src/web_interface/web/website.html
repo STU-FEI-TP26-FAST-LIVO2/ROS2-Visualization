@@ -22,9 +22,9 @@ body {
   font-family: Arial, sans-serif;
   background-color: #1e1e1e;
   color: #ffffff;
-  min-height: 100vh;
+  height: 100vh;
   width: 100%;
-  overflow-x: hidden;
+  overflow: hidden;
   display: grid;
   grid-template-rows: auto 1fr;
 }
@@ -128,10 +128,8 @@ button:hover {
   display: grid;
   grid-template-columns: 420px 1fr;
   gap: 10px;
-  padding: 10px;
   width: 100%;
-
-  height: calc(100vh - var(--header-height));
+  height: 100%;
 }
 
 .left-panels {
@@ -161,7 +159,7 @@ button:hover {
 
 .viewer {
   flex: 1;
-  min-height: 200px;
+  min-height: 0px;
   height: 100%;
 }
 
@@ -330,22 +328,39 @@ button:hover {
   .sidebar.open {
     left: 0;
   }
-  
-  .left-panels {
-    display: none;
-  }
 
   #viewer {
     width: 100%;
   }
   
-  
   .viewer {
-      display: none;
-      width: 100%;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    height: 100%;
+  }
+  
+  .panel {
+    display: none;
+  }
+  
+  .left-panels {
+      display: block;
       height: 100%;
-      min-height: 200px;
     }
+
+
+  .panel.active {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .panel.active .viewer {
+    height: 100%;
+    min-height: 0;
+  }
 
   #viewer.active,
   #map-view.active {
@@ -355,7 +370,6 @@ button:hover {
   #camera-view.active {
     display: flex;
   }
-
   
   #toggle-lidar,
     #toggle-camera,
@@ -476,12 +490,12 @@ button:hover {
 
 <div class="left-panels">
 
-<div class="panel">
+<div id="map-panel" class="panel">
 <div class="panel-title">MAP</div>
 <div id="map-view" class="viewer"></div>
 </div>
 
-<div class="panel">
+<div id="camera-panel" class="panel">
 <div class="panel-title">CAMERA</div>
 <div id="camera-view" class="viewer">
   <img id="camera-image" alt="Camera stream">
@@ -491,7 +505,7 @@ button:hover {
 
 </div>
 
-<div class="panel">
+<div id="lidar-panel" class="panel">
 <div class="panel-title">LIDAR</div>
 <div id="viewer" class="viewer"></div>
 </div>
@@ -954,34 +968,40 @@ function setMobileView(view) {
 
   if (window.innerWidth > 700) return;
 
+  const lidarPanel = document.getElementById("lidar-panel");
+  const cameraPanel = document.getElementById("camera-panel");
+  const mapPanel = document.getElementById("map-panel");
+
   const lidar = document.getElementById("viewer");
   const cameraView = document.getElementById("camera-view");
   const map = document.getElementById("map-view");
 
-  [lidar, cameraView, map].forEach(v =>
-    v.classList.remove("active")
-  );
+  [lidarPanel, cameraPanel, mapPanel]
+    .forEach(p => p.classList.remove("active"));
 
-  if (view === "lidar") lidar.classList.add("active");
-  if (view === "camera") cameraView.classList.add("active");
-  if (view === "map") map.classList.add("active");
+  if (view === "lidar")
+    lidarPanel.classList.add("active");
+
+  if (view === "camera")
+    cameraPanel.classList.add("active");
+
+  if (view === "map")
+    mapPanel.classList.add("active");
 
   sidebar.classList.remove("open");
 
   requestAnimationFrame(() => {
+
     let activeViewer;
 
-    if (view === "lidar") {
-      activeViewer = document.getElementById("viewer");
-    }
+    if (view === "lidar")
+      activeViewer = lidar;
 
-    if (view === "map") {
-      activeViewer = document.getElementById("map-view");
-    }
+    if (view === "map")
+      activeViewer = map;
 
-    if (view === "camera") {
-      activeViewer = document.getElementById("camera-view");
-    }
+    if (view === "camera")
+      activeViewer = cameraView;
 
     if (!activeViewer) return;
 
@@ -992,12 +1012,14 @@ function setMobileView(view) {
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
+      renderer.setPixelRatio(window.devicePixelRatio)
     }
 
     if (view === "map") {
       mapCamera.aspect = w / h;
       mapCamera.updateProjectionMatrix();
       mapRenderer.setSize(w, h);
+      mapRenderer.setPixelRatio(window.devicePixelRatio)
     }
   });
 }
@@ -1012,6 +1034,8 @@ mobileRadios.forEach(radio => {
 if (window.innerWidth <= 700) {
   setMobileView("lidar");
 }
+
+document.getElementById("lidar-panel").classList.add("active");
 
 updateStatus();
 
