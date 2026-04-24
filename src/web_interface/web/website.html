@@ -130,6 +130,8 @@ button:hover {
   gap: 10px;
   padding: 10px;
   width: 100%;
+
+  height: calc(100vh - var(--header-height));
 }
 
 .left-panels {
@@ -159,7 +161,7 @@ button:hover {
 
 .viewer {
   flex: 1;
-  min-height: 0;
+  min-height: 200px;
   height: 100%;
 }
 
@@ -246,20 +248,19 @@ button:hover {
     display: block;
   }
 
-header {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    grid-template-rows: auto auto;
-    padding: 6px 10px;
-    gap: 6px;
-  }
-  
-.header-left {
-    grid-row: 1;
-    grid-column: 2;
-    justify-content: center;
-  }
-
+  header {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      grid-template-rows: auto auto;
+      padding: 6px 10px;
+      gap: 6px;
+    }
+    
+  .header-left {
+      grid-row: 1;
+      grid-column: 2;
+      justify-content: center;
+    }
 
   .site-title {
     text-align: center;
@@ -271,8 +272,6 @@ header {
   .nav-links {
     display: none;
   }
-
-  
 
   .header-right {
     grid-row: 2;
@@ -331,6 +330,56 @@ header {
   .sidebar.open {
     left: 0;
   }
+  
+  .left-panels {
+    display: none;
+  }
+
+  #viewer {
+    width: 100%;
+  }
+  
+  
+  .viewer {
+      display: none;
+      width: 100%;
+      height: 100%;
+      min-height: 200px;
+    }
+
+  #viewer.active,
+  #map-view.active {
+    display: block;
+  }
+
+  #camera-view.active {
+    display: flex;
+  }
+
+  
+  #toggle-lidar,
+    #toggle-camera,
+    #toggle-map {
+      pointer-events: none;
+      opacity: 0.4;
+    }
+}
+
+@media (min-width: 701px) {
+
+  #viewer,
+  #camera-view,
+  #map-view {
+    display: block;
+  }
+
+  #camera-view {
+    display: flex;
+  }
+
+  .left-panels {
+    display: grid;
+  }
 }
 
 .mobile-only .nav-link {
@@ -385,6 +434,27 @@ header {
   <h3>Menu</h3>
   <a id="sidebar-live" class="nav-link">Live</a>
   <a id="sidebar-recordings" class="nav-link">Recordings</a>
+  <hr>
+</div>
+
+<div class="mobile-only">
+  <h3>View</h3>
+
+  <label>
+    <input type="radio" name="mobile-view" value="lidar" checked>
+    LiDAR
+  </label><br>
+
+  <label>
+    <input type="radio" name="mobile-view" value="camera">
+    Camera
+  </label><br>
+
+  <label>
+    <input type="radio" name="mobile-view" value="map">
+    Map
+  </label>
+
   <hr>
 </div>
 
@@ -840,8 +910,6 @@ mapTopic.subscribe(function(message) {
   updateStatus();
 });
 
-/* Camera subscriber */
-
 const cameraTopic = new ROSLIB.Topic({
   ros: ros,
   name: '/camera_image/compressed',
@@ -877,7 +945,86 @@ cameraTopic.subscribe(function(message) {
   updateStatus();
 });
 
+
+const mobileRadios = document.querySelectorAll(
+  'input[name="mobile-view"]'
+);
+
+function setMobileView(view) {
+
+  if (window.innerWidth > 700) return;
+
+  const lidar = document.getElementById("viewer");
+  const cameraView = document.getElementById("camera-view");
+  const map = document.getElementById("map-view");
+
+  [lidar, cameraView, map].forEach(v =>
+    v.classList.remove("active")
+  );
+
+  if (view === "lidar") lidar.classList.add("active");
+  if (view === "camera") cameraView.classList.add("active");
+  if (view === "map") map.classList.add("active");
+
+  sidebar.classList.remove("open");
+
+  requestAnimationFrame(() => {
+    let activeViewer;
+
+    if (view === "lidar") {
+      activeViewer = document.getElementById("viewer");
+    }
+
+    if (view === "map") {
+      activeViewer = document.getElementById("map-view");
+    }
+
+    if (view === "camera") {
+      activeViewer = document.getElementById("camera-view");
+    }
+
+    if (!activeViewer) return;
+
+    const w = activeViewer.clientWidth || 1;
+    const h = activeViewer.clientHeight || 1;
+
+    if (view === "lidar") {
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    }
+
+    if (view === "map") {
+      mapCamera.aspect = w / h;
+      mapCamera.updateProjectionMatrix();
+      mapRenderer.setSize(w, h);
+    }
+  });
+}
+
+mobileRadios.forEach(radio => {
+  radio.addEventListener("change", e => {
+    setMobileView(e.target.value);
+  });
+});
+
+
+if (window.innerWidth <= 700) {
+  setMobileView("lidar");
+}
+
 updateStatus();
+
+window.addEventListener("load", () => {
+
+  if (window.innerWidth <= 700) {
+    setMobileView("lidar");
+  }
+
+  window.dispatchEvent(new Event("resize"));
+
+});
+
 </script>
 
 </body>
