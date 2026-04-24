@@ -30,7 +30,7 @@ body {
 }
 
 :root {
-  --header-height: 96px;
+  --header-height: 86px;
 }
 
 header {
@@ -126,19 +126,16 @@ button:hover {
 
 .main-view {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: 420px 1fr;
   gap: 10px;
   padding: 10px;
   width: 100%;
-  max-width: 100%;
 }
 
 .left-panels {
   display: grid;
-  grid-template-rows: auto auto;
+  grid-template-rows: 1fr 1fr;
   gap: 10px;
-  width: 100%;
-  max-width: 100%;
   min-width: 0;
 }
 
@@ -162,7 +159,8 @@ button:hover {
 
 .viewer {
   flex: 1;
-  min-height: 300px;
+  min-height: 0;
+  height: 100%;
 }
 
 #viewer,
@@ -248,21 +246,25 @@ button:hover {
     display: block;
   }
 
-  header {
+header {
     display: grid;
+    grid-template-columns: 1fr auto 1fr;
     grid-template-rows: auto auto;
-    padding: 6px 8px;
+    padding: 6px 10px;
     gap: 6px;
   }
-
-  .header-left {
+  
+.header-left {
+    grid-row: 1;
+    grid-column: 2;
     justify-content: center;
   }
 
+
   .site-title {
-    width: 100%;
     text-align: center;
-    font-size: 14px;
+    font-size: 15px;
+    width: auto;
     white-space: nowrap;
   }
 
@@ -270,12 +272,27 @@ button:hover {
     display: none;
   }
 
+  
+
   .header-right {
-    display: grid;
-    grid-template-columns: auto auto 1fr auto auto;
+    grid-row: 2;
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+  }
+
+  .header-left-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .header-right-controls {
+    display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 12px;
+    margin-left: auto;
   }
 
   #burger-btn {
@@ -339,16 +356,23 @@ button:hover {
 </nav>
 </div>
 
+
 <div class="header-right">
-<button id="burger-btn">☰</button>
 
-<div class="ros-block">
-ROS:
-<span id="ros-status">connecting...</span>
-</div>
+  <div class="header-left-controls">
+    <button id="burger-btn">☰</button>
 
-<button id="start-record">Start Record</button>
-<button id="stop-record">Stop Record</button>
+    <div class="ros-block">
+      ROS:
+      <span id="ros-status">connected</span>
+    </div>
+  </div>
+
+  <div class="header-right-controls">
+    <button id="start-record">Start Record</button>
+    <button id="stop-record">Stop Record</button>
+  </div>
+
 </div>
 
 </header>
