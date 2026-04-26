@@ -108,7 +108,9 @@ button:hover {
 .container {
   display: grid;
   grid-template-columns: 260px 1fr;
+  grid-template-rows: 1fr;
   height: 100%;
+  min-height: 0;
 }
 
 .sidebar {
@@ -127,9 +129,11 @@ button:hover {
 .main-view {
   display: grid;
   grid-template-columns: 420px 1fr;
+  grid-template-rows: 1fr;
   gap: 10px;
   width: 100%;
   height: 100%;
+  min-height: 0;
 }
 
 .left-panels {
@@ -148,6 +152,7 @@ button:hover {
   width: 100%;
   max-width: 100%;
   min-width: 0;
+  min-height: 0;
 }
 
 .panel-title {
@@ -234,13 +239,7 @@ button:hover {
   gap: 5px;
 }
 
-@media (max-width: 1100px) {
-  .main-view {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 700px) {
+@media (max-width: 1200px) {
 
   .mobile-only {
     display: block;
@@ -312,6 +311,7 @@ button:hover {
 
   .container {
     grid-template-columns: 1fr;
+    grid-template-rows: 1fr; 
   }
 
   .sidebar {
@@ -345,16 +345,31 @@ button:hover {
   }
   
   .left-panels {
-      display: block;
-      height: 100%;
-    }
+    display: none;
+    height: 100%;
+  }
 
+  .left-panels.active {
+    display: block;
+  }
 
   .panel.active {
     display: flex;
     flex-direction: column;
     height: 100%;
     min-height: 0;
+  }
+
+  .main-view {
+    height: 100%;
+    grid-template-columns: 1fr; 
+  }
+
+  #lidar-panel,
+  #camera-panel,
+  #map-panel {
+    height: 100%;
+    width: 100%;
   }
 
   .panel.active .viewer {
@@ -379,7 +394,7 @@ button:hover {
     }
 }
 
-@media (min-width: 701px) {
+@media (min-width: 1201px) {
 
   #viewer,
   #camera-view,
@@ -393,7 +408,15 @@ button:hover {
 
   .left-panels {
     display: grid;
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);  /* 🔧 kľúčové */
+    height: 100%;
   }
+
+  #map-panel,
+  #camera-panel {
+    min-height: 0;
+  }
+
 }
 
 .mobile-only .nav-link {
@@ -966,7 +989,7 @@ const mobileRadios = document.querySelectorAll(
 
 function setMobileView(view) {
 
-  if (window.innerWidth > 700) return;
+  if (window.innerWidth > 1200) return;
 
   const lidarPanel = document.getElementById("lidar-panel");
   const cameraPanel = document.getElementById("camera-panel");
@@ -979,14 +1002,20 @@ function setMobileView(view) {
   [lidarPanel, cameraPanel, mapPanel]
     .forEach(p => p.classList.remove("active"));
 
+  mapPanel.parentElement.classList.remove("active");
+
   if (view === "lidar")
     lidarPanel.classList.add("active");
 
-  if (view === "camera")
+  if (view === "camera") {
     cameraPanel.classList.add("active");
+    mapPanel.parentElement.classList.add("active");
+  }
 
-  if (view === "map")
+  if (view === "map") {
     mapPanel.classList.add("active");
+    mapPanel.parentElement.classList.add("active");
+  }
 
   sidebar.classList.remove("open");
 
@@ -1021,6 +1050,7 @@ function setMobileView(view) {
       mapRenderer.setSize(w, h);
       mapRenderer.setPixelRatio(window.devicePixelRatio)
     }
+    window.dispatchEvent(new Event("resize"));
   });
 }
 
@@ -1031,7 +1061,7 @@ mobileRadios.forEach(radio => {
 });
 
 
-if (window.innerWidth <= 700) {
+if (window.innerWidth <= 1200) {
   setMobileView("lidar");
 }
 
@@ -1041,7 +1071,7 @@ updateStatus();
 
 window.addEventListener("load", () => {
 
-  if (window.innerWidth <= 700) {
+  if (window.innerWidth <= 1200) {
     setMobileView("lidar");
   }
 
