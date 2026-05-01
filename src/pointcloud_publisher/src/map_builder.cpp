@@ -10,6 +10,7 @@
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/common/transforms.h>
 #include <pcl_conversions/pcl_conversions.h>
+#include <pcl/registration/icp.h>
 
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
@@ -53,6 +54,9 @@ public:
             std::bind(&MapBuilder::imuCallback, this, std::placeholders::_1));
 
         global_map_.reset(new pcl::PointCloud<pcl::PointXYZI>());
+
+        previous_cloud_.reset(new pcl::PointCloud<pcl::PointXYZI>());
+        has_previous_ = false;
 
         latest_orientation_.setIdentity();
 
@@ -123,7 +127,57 @@ private:
         pcl::PointCloud<pcl::PointXYZI>::Ptr rotated_cloud(new pcl::PointCloud<pcl::PointXYZI>());
         pcl::transformPointCloud(*filtered_input, *rotated_cloud, transform);
 
-        *global_map_ += *rotated_cloud;
+        if (!has_previous_) {
+
+            // prvý scan
+            *global_map_ += *rotated_cloud;
+            *previous_cloud_ = *rotated_cloud;
+            has_previous_ = true;
+
+        } else {
+
+            if (global_map_->points.size() < 1000) {
+
+                *global_map_ += *rotated_cloud;
+                return;
+            }
+
+            pcl::IterativeClosestPoint<
+                pcl::PointXYZI,
+                pcl::PointXYZI> icp;
+
+            icp.setInputSource(rotated_cloud);
+            icp.setInputTarget(global_map_);
+
+            icp.setMaximumIterations(30);
+            icp.setMaxCorrespondenceDistance(1.0);
+
+            icp.setTransformationEpsilon(1e-6);
+            icp.setEuclideanFitnessEpsilon(1e-6);
+
+            // použitie IMU ako initial guess
+            Eigen::Matrix4f initial_guess =
+                Eigen::Matrix4f::Identity();
+
+            initial_guess.block<3,3>(0,0) =
+                latest_orientation_.toRotationMatrix();
+
+            pcl::PointCloud<pcl::PointXYZI> aligned_cloud;
+
+            icp.align(aligned_cloud, initial_guess);
+
+            if (icp.hasConverged()) {
+
+                *global_map_ += aligned_cloud;
+
+            } else {
+
+                RCLCPP_WARN(
+                    this->get_logger(),
+                    "ICP did not converge");
+
+            }
+        }
 
         if (static_cast<int>(global_map_->points.size()) > max_points_before_filter_) {
             pcl::PointCloud<pcl::PointXYZI>::Ptr filtered_map(new pcl::PointCloud<pcl::PointXYZI>());
@@ -172,6 +226,9 @@ private:
     Eigen::Quaternionf latest_orientation_;
 
     pcl::PointCloud<pcl::PointXYZI>::Ptr global_map_;
+
+    pcl::PointCloud<pcl::PointXYZI>::Ptr previous_cloud_;
+    bool has_previous_;
 
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr publisher_;
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_subscription_;
