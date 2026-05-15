@@ -217,6 +217,56 @@ button:hover {
   font-size: 14px;
 }
 
+#output {
+  background-color: #111;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow: visible;
+  white-space: normal;
+}
+
+.status-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.status-label {
+  color: #aaa;
+  flex: 1 1 auto;
+}
+
+.status-topic,
+.status-value {
+  color: #ccc;
+  text-align: right;
+  min-width: 110px;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.status-value {
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.status-value.connected {
+  color: #00ff88;
+}
+
+.status-value.not-connected {
+  color: #ff5555;
+}
+
+.status-value.closed {
+  color: #888;
+}
+
 #recordings-page {
   display: none;
   padding: 20px;
@@ -225,11 +275,39 @@ button:hover {
 .recording-item {
   padding: 10px;
   border-bottom: 1px solid #333;
-  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .recording-item:hover {
   background-color: #333;
+}
+
+.recording-name {
+  flex: 1;
+  cursor: pointer;
+}
+
+.download-btn {
+  background-color: #00ff88;
+  color: #000;
+  border: none;
+  padding: 6px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 12px;
+  margin-left: 10px;
+  white-space: nowrap;
+}
+
+.download-btn:hover {
+  background-color: #00dd66;
+}
+
+.download-btn:active {
+  background-color: #00bb44;
 }
 
 .ros-block {
@@ -505,7 +583,19 @@ button:hover {
 <hr>
 
 <h4>Status:</h4>
-<pre id="output">Waiting for LiDAR, map and camera...</pre>
+<div id="output">
+  <div class="status-row"><span class="status-label">ROS</span><span class="status-value status-closed">Closed</span></div>
+  <div class="status-row"><span class="status-label">System</span><span class="status-topic">idle</span></div>
+  <div class="status-row"><span class="status-label">LiDAR</span><span class="status-value status-waiting">waiting</span></div>
+  <div class="status-row"><span class="status-label">LiDAR topic</span><span class="status-topic">/lidar_points</span></div>
+  <div class="status-row"><span class="status-label">LiDAR points</span><span class="status-topic">0</span></div>
+  <div class="status-row"><span class="status-label">Camera</span><span class="status-value status-waiting">waiting</span></div>
+  <div class="status-row"><span class="status-label">Camera topic</span><span class="status-topic">/camera_image/compressed</span></div>
+  <div class="status-row"><span class="status-label">IMU</span><span class="status-value status-waiting">waiting</span></div>
+  <div class="status-row"><span class="status-label">IMU topic</span><span class="status-topic">/imu</span></div>
+  <div class="status-row"><span class="status-label">Map</span><span class="status-value status-waiting">waiting</span></div>
+  <div class="status-row"><span class="status-label">Map topic</span><span class="status-topic">/map_points</span></div>
+</div>
 
 </div>
 
@@ -537,9 +627,18 @@ button:hover {
 
 <div id="recordings-page">
 <h2>Recordings</h2>
-<div class="recording-item">Recording_01</div>
-<div class="recording-item">Recording_02</div>
-<div class="recording-item">Recording_03</div>
+<div class="recording-item">
+  <span class="recording-name">Recording_01</span>
+  <button class="download-btn" data-recording="Recording_01">Download</button>
+</div>
+<div class="recording-item">
+  <span class="recording-name">Recording_02</span>
+  <button class="download-btn" data-recording="Recording_02">Download</button>
+</div>
+<div class="recording-item">
+  <span class="recording-name">Recording_03</span>
+  <button class="download-btn" data-recording="Recording_03">Download</button>
+</div>
 </div>
 
 </div>
@@ -566,17 +665,41 @@ let mapPointCount = 0;
 let cameraFrameReceived = false;
 let systemState = "idle";
 
+const sensorStatus = {
+  lidar: { topic: '/lidar_points', lastSeen: 0 },
+  map: { topic: '/map_points', lastSeen: 0 },
+  camera: { topic: '/camera_image/compressed', lastSeen: 0 },
+  imu: { topic: '/imu', lastSeen: 0 }
+};
+
+const statusTimeoutMs = 5000;
+
+function getSensorState(sensor) {
+  const last = sensorStatus[sensor].lastSeen;
+  if (last === 0) {
+    return 'not-connected';
+  }
+  return Date.now() - last > statusTimeoutMs ? 'not-connected' : 'connected';
+}
+
+function renderStatusValue(state) {
+  return `<span class="status-value status-${state}">${state.replace('-', ' ')}</span>`;
+}
+
 function updateStatus(extraMessage = "") {
-  output.textContent =
-    `ROS: ${rosStatus.textContent}\n` +
-    `System: ${systemState}\n` +
-    `LiDAR topic: /lidar_points\n` +
-    `LiDAR points: ${lidarPointCount}\n` +
-    `Map topic: /map_points\n` +
-    `Map points: ${mapPointCount}\n` +
-    `Camera topic: /camera_image/compressed\n` +
-    `Camera: ${cameraFrameReceived ? "receiving" : "waiting"}` +
-    (extraMessage ? `\n${extraMessage}` : "");
+  output.innerHTML =
+    `<div class="status-row"><span class="status-label">ROS</span>${renderStatusValue(rosStatus.textContent)}</div>` +
+    `<div class="status-row"><span class="status-label">System</span><span class="status-topic">${systemState}</span></div>` +
+    `<div class="status-row"><span class="status-label">LiDAR</span>${renderStatusValue(getSensorState('lidar'))}</div>` +
+    `<div class="status-row"><span class="status-label">LiDAR topic</span><span class="status-topic">${sensorStatus.lidar.topic}</span></div>` +
+    `<div class="status-row"><span class="status-label">LiDAR points</span><span class="status-topic">${lidarPointCount}</span></div>` +
+    `<div class="status-row"><span class="status-label">Camera</span>${renderStatusValue(getSensorState('camera'))}</div>` +
+    `<div class="status-row"><span class="status-label">Camera topic</span><span class="status-topic">${sensorStatus.camera.topic}</span></div>` +
+    `<div class="status-row"><span class="status-label">IMU</span>${renderStatusValue(getSensorState('imu'))}</div>` +
+    `<div class="status-row"><span class="status-label">IMU topic</span><span class="status-topic">${sensorStatus.imu.topic}</span></div>` +
+    `<div class="status-row"><span class="status-label">Map</span>${renderStatusValue(getSensorState('map'))}</div>` +
+    `<div class="status-row"><span class="status-label">Map topic</span><span class="status-topic">${sensorStatus.map.topic}</span></div>` +
+    (extraMessage ? `<div class="status-row"><span class="status-label">Info</span><span class="status-topic">${extraMessage}</span></div>` : '');
 }
 
 ros.on('connection', function() {
@@ -904,6 +1027,7 @@ lidarTopic.subscribe(function(message) {
   scene.add(currentCloud);
 
   lidarPointCount = points.length / 3;
+  sensorStatus.lidar.lastSeen = Date.now();
   updateStatus();
 });
 
@@ -944,6 +1068,7 @@ mapTopic.subscribe(function(message) {
   mapScene.add(currentMapCloud);
 
   mapPointCount = points.length / 3;
+  sensorStatus.map.lastSeen = Date.now();
   updateStatus();
 });
 
@@ -979,6 +1104,7 @@ cameraTopic.subscribe(function(message) {
   cameraPlaceholder.style.display = "none";
 
   cameraFrameReceived = true;
+  sensorStatus.camera.lastSeen = Date.now();
   updateStatus();
 });
 
@@ -1078,6 +1204,31 @@ window.addEventListener("load", () => {
   window.dispatchEvent(new Event("resize"));
 
 });
+
+/* Download recordings */
+
+document.querySelectorAll(".download-btn").forEach(button => {
+  button.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const recordingName = button.getAttribute("data-recording");
+    downloadRecording(recordingName);
+  });
+});
+
+function downloadRecording(recordingName) {
+  console.log(`Downloading ${recordingName}...`);
+  
+  // Create a download link - adjust the URL based on your backend
+  const downloadUrl = `/api/recordings/${recordingName}`;
+  
+  // Create a temporary anchor element to trigger download
+  const link = document.createElement("a");
+  link.href = downloadUrl;
+  link.download = `${recordingName}.zip`; // or appropriate file extension
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
 
 </script>
 
