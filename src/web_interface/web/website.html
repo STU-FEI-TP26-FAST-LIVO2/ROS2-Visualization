@@ -81,7 +81,19 @@ header {
   gap: 15px;
   font-size: 14px;
   color: #00ff88;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  min-width: max-content;
+}
+
+.header-right-controls {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+  min-width: max-content;
+  white-space: nowrap;
 }
 
 button {
@@ -94,6 +106,58 @@ button {
 
 button:hover {
   background-color: #333;
+}
+
+input[type="radio"],
+input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  display: inline-block;
+  vertical-align: middle;
+  border: 1px solid #444;
+  background-color: transparent;
+  cursor: pointer;
+}
+
+input[type="radio"] {
+  border-radius: 50%;
+}
+
+input[type="radio"]::before,
+input[type="checkbox"]::before {
+  content: "";
+  display: block;
+  width: 0;
+  height: 0;
+  margin: 0 auto;
+}
+
+input[type="radio"]:checked::before {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #00ff88;
+  margin-top: 3px;
+}
+
+input[type="checkbox"] {
+  border-radius: 4px;
+}
+
+input[type="checkbox"]:checked::before {
+  width: 10px;
+  height: 10px;
+  background-color: #00ff88;
+  margin-top: 2px;
+}
+
+.button-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: nowrap;
 }
 
 #burger-btn {
@@ -113,6 +177,11 @@ button:hover {
   min-height: 0;
 }
 
+#main-page {
+  height: 100%;
+  min-height: 0;
+}
+
 .sidebar {
   background-color: #161616;
   border-right: 1px solid #333;
@@ -128,19 +197,38 @@ button:hover {
 
 .main-view {
   display: grid;
-  grid-template-columns: 420px 1fr;
-  grid-template-rows: 1fr;
+  align-items: stretch;
+  justify-items: stretch;
+  grid-template-columns: minmax(320px, 420px) minmax(0, 1.5fr);
+  grid-auto-rows: minmax(0, 1fr);
   gap: 10px;
   width: 100%;
   height: 100%;
   min-height: 0;
 }
 
+.main-view.single-column {
+  grid-template-columns: 1fr;
+}
+
 .left-panels {
   display: grid;
-  grid-template-rows: 1fr 1fr;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  grid-template-columns: 1fr;
+  grid-auto-rows: minmax(0, 1fr);
   gap: 10px;
   min-width: 0;
+}
+
+.left-panels.side-by-side {
+  grid-template-columns: 1fr 1fr;
+  grid-auto-rows: minmax(0, 1fr);
+}
+
+.left-panels.hidden {
+  display: none;
 }
 
 .panel {
@@ -153,6 +241,7 @@ button:hover {
   max-width: 100%;
   min-width: 0;
   min-height: 0;
+  height: 100%;
 }
 
 .panel-title {
@@ -163,8 +252,11 @@ button:hover {
 }
 
 .viewer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex: 1;
-  min-height: 0px;
+  min-height: 0;
   height: 100%;
 }
 
@@ -213,6 +305,9 @@ button:hover {
 
 #camera-placeholder {
   position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   color: #aaa;
   font-size: 14px;
 }
@@ -365,8 +460,43 @@ button:hover {
   .header-right-controls {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 18px;
     margin-left: auto;
+    flex-wrap: nowrap;
+  }
+
+  .button-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: nowrap;
+  }
+
+  .header-right-controls .record-control-btn {
+    display: none;
+  }
+
+  .header-right-controls .system-control-btn {
+    display: inline-flex;
+  }
+
+  .mobile-action-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .action-btn {
+    width: 100%;
+    border: 1px solid #444;
+    padding: 8px 10px;
+    background-color: #222;
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .action-btn:hover {
+    background-color: #333;
   }
 
   #burger-btn {
@@ -381,7 +511,9 @@ button:hover {
   }
 
   #start-record,
-  #stop-record {
+  #stop-record,
+  #start-system,
+  #restart-system {
     font-size: 12px;
     padding: 6px 8px;
     white-space: nowrap;
@@ -533,8 +665,14 @@ button:hover {
   </div>
 
   <div class="header-right-controls">
-    <button id="start-record">Start Record</button>
-    <button id="stop-record">Stop Record</button>
+    <div class="button-group">
+      <button id="start-record" class="record-control-btn">Start Record</button>
+      <button id="stop-record" class="record-control-btn">Stop Record</button>
+    </div>
+    <div class="button-group">
+      <button id="start-system" class="system-control-btn">Start</button>
+      <button id="restart-system" class="system-control-btn">Restart</button>
+    </div>
   </div>
 
 </div>
@@ -549,6 +687,10 @@ button:hover {
   <h3>Menu</h3>
   <a id="sidebar-live" class="nav-link">Live</a>
   <a id="sidebar-recordings" class="nav-link">Recordings</a>
+  <div class="mobile-action-row">
+    <button id="mobile-start-record" class="action-btn">Start Record</button>
+    <button id="mobile-stop-record" class="action-btn">Stop Record</button>
+  </div>
   <hr>
 </div>
 
@@ -659,6 +801,12 @@ const cameraImage = document.getElementById("camera-image");
 const cameraPlaceholder = document.getElementById("camera-placeholder");
 const startButton = document.getElementById("start-record");
 const stopButton = document.getElementById("stop-record");
+const startSystemButton = document.getElementById("start-system");
+const restartSystemButton = document.getElementById("restart-system");
+const mobileStartButton = document.getElementById("mobile-start-record");
+const mobileStopButton = document.getElementById("mobile-stop-record");
+const mobileStartSystemButton = document.getElementById("mobile-start-system");
+const mobileRestartSystemButton = document.getElementById("mobile-restart-system");
 
 let lidarPointCount = 0;
 let mapPointCount = 0;
@@ -732,7 +880,13 @@ const stopService = new ROSLIB.Service({
   serviceType: 'std_srvs/srv/Trigger'
 });
 
-startButton.addEventListener("click", () => {
+const restartService = new ROSLIB.Service({
+  ros: ros,
+  name: '/restart_system',
+  serviceType: 'std_srvs/srv/Trigger'
+});
+
+function callStartSystem() {
   const request = new ROSLIB.ServiceRequest({});
 
   updateStatus("Calling /start_system ...");
@@ -749,9 +903,9 @@ startButton.addEventListener("click", () => {
       updateStatus("START ERROR");
     }
   );
-});
+}
 
-stopButton.addEventListener("click", () => {
+function callStopSystem() {
   const request = new ROSLIB.ServiceRequest({});
 
   updateStatus("Calling /stop_system ...");
@@ -768,6 +922,35 @@ stopButton.addEventListener("click", () => {
       updateStatus("STOP ERROR");
     }
   );
+}
+
+function callRestartSystem() {
+  const request = new ROSLIB.ServiceRequest({});
+
+  updateStatus("Calling /restart_system ...");
+  console.log("Calling /restart_system ...");
+
+  restartService.callService(
+    request,
+    function(result) {
+      console.log("Restart response:", result);
+      updateStatus(`RESTART: ${result.message}`);
+    },
+    function(error) {
+      console.error("Restart service failed:", error);
+      updateStatus("RESTART ERROR, trying stop then start...");
+      callStopSystem();
+      setTimeout(callStartSystem, 1000);
+    }
+  );
+}
+
+[startButton, stopButton, startSystemButton, restartSystemButton, mobileStartButton, mobileStopButton, mobileStartSystemButton, mobileRestartSystemButton].forEach(button => {
+  if (!button) return;
+  if (button.id.includes('start-record')) button.addEventListener('click', callStartSystem);
+  if (button.id.includes('stop-record')) button.addEventListener('click', callStopSystem);
+  if (button.id === 'start-system' || button.id === 'mobile-start-system') button.addEventListener('click', callStartSystem);
+  if (button.id === 'restart-system' || button.id === 'mobile-restart-system') button.addEventListener('click', callRestartSystem);
 });
 
 /* UI status subscriber */
@@ -924,25 +1107,80 @@ animate();
 
 /* UI toggles */
 
+const mainView = document.querySelector(".main-view");
+const mapPanel = document.getElementById("map-panel");
+const cameraPanel = document.getElementById("camera-panel");
+const lidarPanel = document.getElementById("lidar-panel");
+const leftPanels = document.querySelector(".left-panels");
+
+function updatePanelLayout() {
+
+  if (window.innerWidth <= 1200) {
+    return;
+  }
+  const mapVisible = mapPanel.style.display !== "none";
+  const cameraVisible = cameraPanel.style.display !== "none";
+  const lidarVisible = lidarPanel.style.display !== "none";
+  const leftVisible = mapVisible || cameraVisible;
+  const visibleCount = [mapVisible, cameraVisible, lidarVisible].filter(Boolean).length;
+  const mapCameraOnly = mapVisible && cameraVisible && !lidarVisible;
+
+  if (leftVisible) {
+
+    leftPanels.style.display = "grid";
+    if (window.innerWidth > 1200) {
+
+      if (mapCameraOnly) {
+        leftPanels.style.gridTemplateColumns = "1fr 1fr";
+        leftPanels.style.gridTemplateRows = "1fr";
+      } else {
+        leftPanels.style.gridTemplateColumns = "1fr";
+        leftPanels.style.gridTemplateRows = "1fr";
+      }
+    }
+    leftPanels.classList.toggle("side-by-side", mapCameraOnly);
+
+  } else {
+    leftPanels.style.display = "none";
+    leftPanels.classList.remove("side-by-side");
+  }
+
+  if (visibleCount === 1 || mapCameraOnly) {
+    mainView.style.gridTemplateColumns = "1fr";
+  } else if (visibleCount === 2) {
+    mainView.style.gridTemplateColumns = "1fr 1fr";
+  } else {
+    mainView.style.gridTemplateColumns = "minmax(320px, 420px) minmax(0, 1.5fr)";
+  }
+
+  window.requestAnimationFrame(() => {
+    window.dispatchEvent(new Event("resize"));
+  });
+}
+
+function setPanelVisibility(panel, visible) {
+  panel.style.display = visible ? "flex" : "none";
+  updatePanelLayout();
+}
+
 document.getElementById("toggle-grid").addEventListener("change", e => {
   grid.visible = e.target.checked;
   mapGrid.visible = e.target.checked;
 });
 
 document.getElementById("toggle-map").addEventListener("change", e => {
-  document.getElementById("map-view").style.display =
-    e.target.checked ? "block" : "none";
+  setPanelVisibility(mapPanel, e.target.checked);
 });
 
 document.getElementById("toggle-camera").addEventListener("change", e => {
-  document.getElementById("camera-view").style.display =
-    e.target.checked ? "flex" : "none";
+  setPanelVisibility(cameraPanel, e.target.checked);
 });
 
 document.getElementById("toggle-lidar").addEventListener("change", e => {
-  document.getElementById("viewer").style.display =
-    e.target.checked ? "block" : "none";
+  setPanelVisibility(lidarPanel, e.target.checked);
 });
+
+updatePanelLayout();
 
 /* BURGER */
 
