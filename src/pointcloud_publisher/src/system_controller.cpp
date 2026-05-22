@@ -26,19 +26,24 @@ public:
       pointcloud_pid_(-1),
       camera_pid_(-1),
       map_builder_pid_(-1),
-      record_pid_(-1)
+      record_pid_(-1),
+      run_all_pid_(-1)
     {
         camera_input_topic_ = this->declare_parameter<std::string>(
             "camera_input_topic",
-            "/basler/image_raw");
+            "/rgb_img");
 
         imu_input_topic_ = this->declare_parameter<std::string>(
             "imu_input_topic",
-            "/alphasense/imu");
+            "/imu");
 
         recordings_dir_ = this->declare_parameter<std::string>(
             "recordings_dir",
             "/home/jetson/ROS2-Visualization/recordings");
+
+        run_all_script_ = this->declare_parameter<std::string>(
+            "run_all_script",
+            "/home/jetson/run_all.sh");
 
         logs_dir_ = recordings_dir_ + "/controller_logs";
 
@@ -59,9 +64,14 @@ public:
             std::bind(&SystemController::listCallback, this,
                 std::placeholders::_1, std::placeholders::_2));
 
+        run_all_service_ = this->create_service<std_srvs::srv::Trigger>(
+            "/run_all",
+            std::bind(&SystemController::runAllCallback, this,
+                std::placeholders::_1, std::placeholders::_2));
+
         publishStatus();
 
-        RCLCPP_INFO(this->get_logger(), "System controller started WITH map_builder");
+        RCLCPP_INFO(this->get_logger(), "System controller started WITH map_builder and run_all service");
     }
 
     ~SystemController() override
@@ -199,6 +209,7 @@ private:
 
     void stopAllProcesses()
     {
+        stopProcess(run_all_pid_, "run_all");
         stopProcess(record_pid_, "rosbag_record");
         stopProcess(map_builder_pid_, "map_builder");
         stopProcess(camera_pid_, "camera");
@@ -263,7 +274,7 @@ private:
         }
 
         if (!lidar_ready) {
-            throw std::runtime_error("/lidar_points publisher not found");
+            throw std::runtime_error("/lidar publisher not found");
         }
 
         if (!camera_ready) {
@@ -275,27 +286,65 @@ private:
         }
     }
 
+    void runAllCallback(
+        const std::shared_ptr<std_srvs::srv::Trigger::Request>,
+        std::shared_ptr<std_srvs::srv::Trigger::Response> response)
+    {
+        RCLCPP_INFO(this->get_logger(), "START button pressed - launching run_all.sh");
+
+        try {
+            fs::create_directories(logs_dir_);
+
+            if (!fs::exists(run_all_script_)) {
+                throw std::runtime_error("run_all.sh not found: " + run_all_script_);
+            }
+
+            const std::string t = getTimestamp();
+
+            std::string script_dir = fs::path(run_all_script_).parent_path().string();
+            std::string script_name = fs::path(run_all_script_).filename().string();
+
+            std::string cmd =
+                "cd \"" + script_dir + "\" && "
+                "bash \"" + script_name + "\"";
+
+            run_all_pid_ = startCommandWithLog(
+                cmd,
+                logs_dir_ + "/run_all_" + t + ".log"
+            );
+
+            state_ = "run_all_started";
+            publishStatus();
+
+            response->success = true;
+            response->message = "Started run_all.sh";
+
+        } catch (const std::exception & e) {
+            state_ = "run_all_error";
+            publishStatus();
+
+            response->success = false;
+            response->message = e.what();
+
+            RCLCPP_ERROR(this->get_logger(), "%s", e.what());
+        }
+    }
+
     void startCallback(
         const std::shared_ptr<std_srvs::srv::Trigger::Request>,
         std::shared_ptr<std_srvs::srv::Trigger::Response> response)
     {
-        RCLCPP_INFO(this->get_logger(), "START pressed");
+        RCLCPP_INFO(this->get_logger(), "START RECORD pressed");
 
-        if (state_ == "running") {
+        if (state_ == "recording") {
             response->success = false;
-            response->message = "Already running";
+            response->message = "Already recording";
             return;
         }
 
         try {
-
-            const std::string ros_setup =
-                "source /opt/ros/humble/setup.bash && "
-                "source ~/ROS2-Visualization/install/setup.bash && ";
-
             fs::create_directories(recordings_dir_);
             fs::create_directories(logs_dir_);
-
 
             const std::string t = getTimestamp();
             const std::string ros = rosSetup();
@@ -315,7 +364,7 @@ private:
                 ros +
                 "ros2 run pointcloud_publisher map_builder_node "
                 "--ros-args "
-                "-p input_cloud_topic:=/cloud_registered"
+                "-p input_cloud_topic:=/cloud_registered "
                 "-p input_imu_topic:=\"" + imu_input_topic_ + "\" "
                 "-p output_map_topic:=/map_points",
                 logs_dir_ + "/map_builder_" + t + ".log"
@@ -364,7 +413,7 @@ private:
                 throw std::runtime_error("rosbag record terminal failed");
             }
 
-            state_ = "running";
+            state_ = "recording";
             publishStatus();
 
             response->success = true;
@@ -387,9 +436,12 @@ private:
         const std::shared_ptr<std_srvs::srv::Trigger::Request>,
         std::shared_ptr<std_srvs::srv::Trigger::Response> response)
     {
-        RCLCPP_INFO(this->get_logger(), "STOP pressed");
+        RCLCPP_INFO(this->get_logger(), "STOP RECORD pressed");
 
-        stopAllProcesses();
+        stopProcess(record_pid_, "rosbag_record");
+        stopProcess(map_builder_pid_, "map_builder");
+        stopProcess(camera_pid_, "camera");
+        stopProcess(pointcloud_pid_, "pointcloud");
 
         sleep(2);
 
@@ -399,7 +451,7 @@ private:
         publishStatus();
 
         response->success = true;
-        response->message = "Stopped and reindexed";
+        response->message = "Stopped recording and reindexed";
     }
 
     void listCallback(
@@ -436,16 +488,19 @@ private:
     std::string recordings_dir_;
     std::string logs_dir_;
     std::string last_session_path_;
+    std::string run_all_script_;
 
     pid_t pointcloud_pid_;
     pid_t camera_pid_;
     pid_t map_builder_pid_;
     pid_t record_pid_;
+    pid_t run_all_pid_;
 
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr status_pub_;
     rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr start_service_;
     rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr stop_service_;
     rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr list_service_;
+    rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr run_all_service_;
 };
 
 int main(int argc, char ** argv)

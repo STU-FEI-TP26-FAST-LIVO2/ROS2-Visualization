@@ -17,7 +17,7 @@ public:
     : Node("camera_publisher")
     {
         input_topic_ = this->declare_parameter<std::string>(
-            "input_topic", "/basler/image_raw");
+            "input_topic", "/rgb_img");
 
         output_topic_ = this->declare_parameter<std::string>(
             "output_topic", "/camera_image/compressed");

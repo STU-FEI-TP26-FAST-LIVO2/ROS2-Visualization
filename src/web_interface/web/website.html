@@ -618,7 +618,7 @@ input[type="checkbox"]:checked::before {
 
   .left-panels {
     display: grid;
-    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);  /* 🔧 kľúčové */
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
     height: 100%;
   }
 
@@ -799,10 +799,12 @@ const rosStatus = document.getElementById("ros-status");
 const output = document.getElementById("output");
 const cameraImage = document.getElementById("camera-image");
 const cameraPlaceholder = document.getElementById("camera-placeholder");
+
 const startButton = document.getElementById("start-record");
 const stopButton = document.getElementById("stop-record");
 const startSystemButton = document.getElementById("start-system");
 const restartSystemButton = document.getElementById("restart-system");
+
 const mobileStartButton = document.getElementById("mobile-start-record");
 const mobileStopButton = document.getElementById("mobile-stop-record");
 const mobileStartSystemButton = document.getElementById("mobile-start-system");
@@ -886,6 +888,12 @@ const restartService = new ROSLIB.Service({
   serviceType: 'std_srvs/srv/Trigger'
 });
 
+const runAllService = new ROSLIB.Service({
+  ros: ros,
+  name: '/run_all',
+  serviceType: 'std_srvs/srv/Trigger'
+});
+
 function callStartSystem() {
   const request = new ROSLIB.ServiceRequest({});
 
@@ -895,12 +903,12 @@ function callStartSystem() {
   startService.callService(
     request,
     function(result) {
-      console.log("Start response:", result);
-      updateStatus(`START: ${result.message}`);
+      console.log("Start recording response:", result);
+      updateStatus(`START RECORD: ${result.message}`);
     },
     function(error) {
-      console.error("Start service failed:", error);
-      updateStatus("START ERROR");
+      console.error("Start recording service failed:", error);
+      updateStatus("START RECORD ERROR");
     }
   );
 }
@@ -914,12 +922,31 @@ function callStopSystem() {
   stopService.callService(
     request,
     function(result) {
-      console.log("Stop response:", result);
-      updateStatus(`STOP: ${result.message}`);
+      console.log("Stop recording response:", result);
+      updateStatus(`STOP RECORD: ${result.message}`);
     },
     function(error) {
-      console.error("Stop service failed:", error);
-      updateStatus("STOP ERROR");
+      console.error("Stop recording service failed:", error);
+      updateStatus("STOP RECORD ERROR");
+    }
+  );
+}
+
+function callRunAll() {
+  const request = new ROSLIB.ServiceRequest({});
+
+  updateStatus("Calling /run_all ...");
+  console.log("Calling /run_all ...");
+
+  runAllService.callService(
+    request,
+    function(result) {
+      console.log("run_all response:", result);
+      updateStatus(`START: ${result.message}`);
+    },
+    function(error) {
+      console.error("run_all service failed:", error);
+      updateStatus("START ERROR - /run_all failed");
     }
   );
 }
@@ -938,19 +965,40 @@ function callRestartSystem() {
     },
     function(error) {
       console.error("Restart service failed:", error);
-      updateStatus("RESTART ERROR, trying stop then start...");
+      updateStatus("RESTART ERROR, trying stop record then start run_all...");
       callStopSystem();
-      setTimeout(callStartSystem, 1000);
+      setTimeout(callRunAll, 1000);
     }
   );
 }
 
-[startButton, stopButton, startSystemButton, restartSystemButton, mobileStartButton, mobileStopButton, mobileStartSystemButton, mobileRestartSystemButton].forEach(button => {
+[
+  startButton,
+  stopButton,
+  startSystemButton,
+  restartSystemButton,
+  mobileStartButton,
+  mobileStopButton,
+  mobileStartSystemButton,
+  mobileRestartSystemButton
+].forEach(button => {
   if (!button) return;
-  if (button.id.includes('start-record')) button.addEventListener('click', callStartSystem);
-  if (button.id.includes('stop-record')) button.addEventListener('click', callStopSystem);
-  if (button.id === 'start-system' || button.id === 'mobile-start-system') button.addEventListener('click', callStartSystem);
-  if (button.id === 'restart-system' || button.id === 'mobile-restart-system') button.addEventListener('click', callRestartSystem);
+
+  if (button.id.includes('start-record')) {
+    button.addEventListener('click', callStartSystem);
+  }
+
+  if (button.id.includes('stop-record')) {
+    button.addEventListener('click', callStopSystem);
+  }
+
+  if (button.id === 'start-system' || button.id === 'mobile-start-system') {
+    button.addEventListener('click', callRunAll);
+  }
+
+  if (button.id === 'restart-system' || button.id === 'mobile-restart-system') {
+    button.addEventListener('click', callRestartSystem);
+  }
 });
 
 /* UI status subscriber */
@@ -1456,13 +1504,11 @@ document.querySelectorAll(".download-btn").forEach(button => {
 function downloadRecording(recordingName) {
   console.log(`Downloading ${recordingName}...`);
   
-  // Create a download link - adjust the URL based on your backend
   const downloadUrl = `/api/recordings/${recordingName}`;
   
-  // Create a temporary anchor element to trigger download
   const link = document.createElement("a");
   link.href = downloadUrl;
-  link.download = `${recordingName}.zip`; // or appropriate file extension
+  link.download = `${recordingName}.zip`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -1472,3 +1518,4 @@ function downloadRecording(recordingName) {
 
 </body>
 </html>
+
