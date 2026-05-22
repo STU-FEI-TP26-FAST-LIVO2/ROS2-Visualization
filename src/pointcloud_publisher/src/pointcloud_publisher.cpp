@@ -16,15 +16,15 @@ public:
     : Node("pointcloud_publisher")
     {
         publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
-            "/lidar_points", 10);
+            "/lidar", 10);
 
         subscription_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-            "/hesai/pandar",
+            "/lidar_points",
             10,
             std::bind(&PointCloudPublisher::pointCloudCallback, this, std::placeholders::_1));
 
         RCLCPP_INFO(this->get_logger(), "PointCloud downsampling republisher started");
-        RCLCPP_INFO(this->get_logger(), "Subscribed topic: /hesai/pandar");
+        RCLCPP_INFO(this->get_logger(), "Subscribed topic: /lidar_points");
         RCLCPP_INFO(this->get_logger(), "Publishing topic: /lidar_points");
     }
 

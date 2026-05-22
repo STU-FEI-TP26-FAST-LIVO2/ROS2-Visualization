@@ -792,7 +792,7 @@ import { OrbitControls } from './js/OrbitControls.js';
 /* ROS */
 
 const ros = new ROSLIB.Ros({
-  url: 'ws://localhost:9090'
+  url: `ws://${window.location.hostname}:9090`
 });
 
 const rosStatus = document.getElementById("ros-status");
@@ -814,7 +814,7 @@ let cameraFrameReceived = false;
 let systemState = "idle";
 
 const sensorStatus = {
-  lidar: { topic: '/lidar_points', lastSeen: 0 },
+  lidar: { topic: '/lidar', lastSeen: 0 },
   map: { topic: '/map_points', lastSeen: 0 },
   camera: { topic: '/camera_image/compressed', lastSeen: 0 },
   imu: { topic: '/imu', lastSeen: 0 }
@@ -1232,7 +1232,7 @@ window.addEventListener("resize", () => {
 
 const lidarTopic = new ROSLIB.Topic({
   ros: ros,
-  name: '/lidar_points',
+  name: '/lidar',
   messageType: 'sensor_msgs/msg/PointCloud2'
 });
 

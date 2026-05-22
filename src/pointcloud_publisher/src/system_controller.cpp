@@ -4,11 +4,12 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <cerrno>
 #include <stdexcept>
 #include <ctime>
 #include <filesystem>
 #include <sstream>
+#include <chrono>
+#include <cstdlib>
 
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
@@ -22,47 +23,45 @@ public:
     SystemController()
     : Node("system_controller"),
       state_("idle"),
-      bag_pid_(-1),
       pointcloud_pid_(-1),
       camera_pid_(-1),
+      map_builder_pid_(-1),
       record_pid_(-1)
     {
-        bag_path_ = this->declare_parameter<std::string>(
-            "bag_path",
-            "/home/gabriela/exp14_basement_2");
-
         camera_input_topic_ = this->declare_parameter<std::string>(
             "camera_input_topic",
-            "/alphasense/cam0/image_raw");
+            "/basler/image_raw");
+
+        imu_input_topic_ = this->declare_parameter<std::string>(
+            "imu_input_topic",
+            "/alphasense/imu");
 
         recordings_dir_ = this->declare_parameter<std::string>(
             "recordings_dir",
-            "/home/gabriela/ROS2-Visualization/recordings");
+            "/home/jetson/ROS2-Visualization/recordings");
 
-        status_pub_ = this->create_publisher<std_msgs::msg::String>(
-            "/ui/status", 10);
+        logs_dir_ = recordings_dir_ + "/controller_logs";
+
+        status_pub_ = this->create_publisher<std_msgs::msg::String>("/ui/status", 10);
 
         start_service_ = this->create_service<std_srvs::srv::Trigger>(
             "/start_system",
             std::bind(&SystemController::startCallback, this,
-                std::placeholders::_1, std::placeholders::_2)
-        );
+                std::placeholders::_1, std::placeholders::_2));
 
         stop_service_ = this->create_service<std_srvs::srv::Trigger>(
             "/stop_system",
             std::bind(&SystemController::stopCallback, this,
-                std::placeholders::_1, std::placeholders::_2)
-        );
+                std::placeholders::_1, std::placeholders::_2));
 
         list_service_ = this->create_service<std_srvs::srv::Trigger>(
             "/list_recordings",
             std::bind(&SystemController::listCallback, this,
-                std::placeholders::_1, std::placeholders::_2)
-        );
+                std::placeholders::_1, std::placeholders::_2));
 
         publishStatus();
 
-        RCLCPP_INFO(this->get_logger(), "System controller started");
+        RCLCPP_INFO(this->get_logger(), "System controller started WITH map_builder");
     }
 
     ~SystemController() override
@@ -71,16 +70,12 @@ public:
     }
 
 private:
-
-
-    void publishStatus()
+    std::string rosSetup()
     {
-        std_msgs::msg::String msg;
-        msg.data = state_;
-        status_pub_->publish(msg);
+        return
+            "source /opt/ros/humble/setup.bash && "
+            "source /home/jetson/ROS2-Visualization/install/setup.bash && ";
     }
-
-
 
     std::string getTimestamp()
     {
@@ -93,17 +88,28 @@ private:
         return std::string(buffer);
     }
 
-
-
-    pid_t startCommand(const std::string & command)
+    void publishStatus()
     {
+        std_msgs::msg::String msg;
+        msg.data = state_;
+        status_pub_->publish(msg);
+    }
+
+    pid_t startCommandWithLog(const std::string & command, const std::string & log_file)
+    {
+        std::string full_cmd =
+            "mkdir -p \"" + logs_dir_ + "\" && "
+            "(" + command + ") > \"" + log_file + "\" 2>&1";
+
+        RCLCPP_INFO(this->get_logger(), "Starting command:");
+        RCLCPP_INFO(this->get_logger(), "%s", command.c_str());
+        RCLCPP_INFO(this->get_logger(), "Log: %s", log_file.c_str());
+
         pid_t pid = fork();
 
         if (pid == 0) {
             setpgid(0, 0);
-
-            execlp("bash", "bash", "-lc", command.c_str(), nullptr);
-
+            execlp("bash", "bash", "-lc", full_cmd.c_str(), nullptr);
             perror("exec failed");
             _exit(1);
         }
@@ -116,15 +122,36 @@ private:
         return pid;
     }
 
-    bool isProcessAlive(pid_t pid)
+    pid_t startCommandNoLog(const std::string & command)
     {
-        if (pid <= 0) return false;
-        return (kill(pid, 0) == 0);
+        RCLCPP_INFO(this->get_logger(), "Starting command without log redirect:");
+        RCLCPP_INFO(this->get_logger(), "%s", command.c_str());
+
+        pid_t pid = fork();
+
+        if (pid == 0) {
+            setpgid(0, 0);
+            execlp("bash", "bash", "-lc", command.c_str(), nullptr);
+            perror("exec failed");
+            _exit(1);
+        }
+
+        if (pid < 0) {
+            throw std::runtime_error("fork() failed");
+        }
+
+        setpgid(pid, pid);
+        return pid;
     }
 
-    bool waitForExit(pid_t pid)
+    bool isAlive(pid_t pid)
     {
-        for (int i = 0; i < 20; ++i) {
+        return pid > 0 && kill(pid, 0) == 0;
+    }
+
+    bool waitForExit(pid_t pid, int loops)
+    {
+        for (int i = 0; i < loops; ++i) {
             int status;
             pid_t result = waitpid(pid, &status, WNOHANG);
 
@@ -134,6 +161,7 @@ private:
 
             usleep(100000);
         }
+
         return false;
     }
 
@@ -141,36 +169,111 @@ private:
     {
         if (pid <= 0) return;
 
-        RCLCPP_INFO(this->get_logger(), "Stopping %s (pid=%d)", name.c_str(), pid);
+        RCLCPP_INFO(this->get_logger(), "Stopping %s pid=%d", name.c_str(), pid);
 
         kill(-pid, SIGINT);
 
-        if (waitForExit(pid)) {
+        int wait_loops = (name == "rosbag_record") ? 200 : 50;
+
+        if (waitForExit(pid, wait_loops)) {
             pid = -1;
             return;
         }
 
+        if (name == "rosbag_record") {
+            RCLCPP_WARN(this->get_logger(), "rosbag_record did not exit after SIGINT");
+        }
+
         kill(-pid, SIGTERM);
 
-        if (waitForExit(pid)) {
+        if (waitForExit(pid, 50)) {
             pid = -1;
             return;
         }
 
         kill(-pid, SIGKILL);
         waitpid(pid, nullptr, 0);
+
         pid = -1;
     }
 
     void stopAllProcesses()
     {
         stopProcess(record_pid_, "rosbag_record");
+        stopProcess(map_builder_pid_, "map_builder");
         stopProcess(camera_pid_, "camera");
-        stopProcess(pointcloud_pid_, "lidar");
-        stopProcess(bag_pid_, "rosbag_play");
+        stopProcess(pointcloud_pid_, "pointcloud");
     }
 
+    void reindexLastBag()
+    {
+        if (last_session_path_.empty()) {
+            RCLCPP_WARN(this->get_logger(), "No last session path to reindex");
+            return;
+        }
 
+        if (!fs::exists(last_session_path_)) {
+            RCLCPP_WARN(this->get_logger(), "Bag folder does not exist: %s", last_session_path_.c_str());
+            return;
+        }
+
+        std::string cmd =
+            "source /opt/ros/humble/setup.bash && "
+            "ros2 bag reindex \"" + last_session_path_ + "\"";
+
+        RCLCPP_INFO(this->get_logger(), "Reindexing bag:");
+        RCLCPP_INFO(this->get_logger(), "%s", cmd.c_str());
+
+        int ret = std::system(("bash -lc '" + cmd + "'").c_str());
+
+        if (ret == 0) {
+            RCLCPP_INFO(this->get_logger(), "Bag reindex finished successfully");
+        } else {
+            RCLCPP_WARN(this->get_logger(), "Bag reindex failed");
+        }
+    }
+
+    void waitForTopics()
+    {
+        RCLCPP_INFO(this->get_logger(), "Waiting for output topics...");
+
+        bool lidar_ready = false;
+        bool camera_ready = false;
+        bool map_ready = false;
+
+        for (int i = 0; i < 100; ++i) {
+            if (this->count_publishers("/lidar") > 0) {
+                lidar_ready = true;
+            }
+
+            if (this->count_publishers("/camera_image/compressed") > 0) {
+                camera_ready = true;
+            }
+
+            if (this->count_publishers("/map_points") > 0) {
+                map_ready = true;
+            }
+
+            if (lidar_ready && camera_ready && map_ready) {
+                RCLCPP_INFO(this->get_logger(), "Topics are ready");
+                return;
+            }
+
+            rclcpp::sleep_for(std::chrono::milliseconds(200));
+        }
+
+        if (!lidar_ready) {
+            throw std::runtime_error("/lidar_points publisher not found");
+        }
+
+        if (!camera_ready) {
+            throw std::runtime_error("/camera_image/compressed publisher not found");
+        }
+
+        if (!map_ready) {
+            throw std::runtime_error("/map_points publisher not found");
+        }
+    }
 
     void startCallback(
         const std::shared_ptr<std_srvs::srv::Trigger::Request>,
@@ -185,72 +288,100 @@ private:
         }
 
         try {
+
             const std::string ros_setup =
-                "source /opt/ros/foxy/setup.bash && "
+                "source /opt/ros/humble/setup.bash && "
                 "source ~/ROS2-Visualization/install/setup.bash && ";
 
-          
-            bag_pid_ = startCommand(
-                ros_setup + "ros2 bag play \"" + bag_path_ + "\""
+            fs::create_directories(recordings_dir_);
+            fs::create_directories(logs_dir_);
+
+
+            const std::string t = getTimestamp();
+            const std::string ros = rosSetup();
+
+            pointcloud_pid_ = startCommandWithLog(
+                ros + "ros2 run pointcloud_publisher pointcloud_publisher_node",
+                logs_dir_ + "/pointcloud_" + t + ".log"
+            );
+
+            sleep(1);
+
+            if (!isAlive(pointcloud_pid_)) {
+                throw std::runtime_error("pointcloud publisher failed");
+            }
+
+            map_builder_pid_ = startCommandWithLog(
+                ros +
+                "ros2 run pointcloud_publisher map_builder_node "
+                "--ros-args "
+                "-p input_cloud_topic:=/cloud_registered"
+                "-p input_imu_topic:=\"" + imu_input_topic_ + "\" "
+                "-p output_map_topic:=/map_points",
+                logs_dir_ + "/map_builder_" + t + ".log"
+            );
+
+            sleep(1);
+
+            if (!isAlive(map_builder_pid_)) {
+                throw std::runtime_error("map_builder failed");
+            }
+
+            camera_pid_ = startCommandWithLog(
+                ros +
+                "ros2 run pointcloud_publisher camera_publisher_node "
+                "--ros-args -p input_topic:=\"" + camera_input_topic_ + "\"",
+                logs_dir_ + "/camera_" + t + ".log"
+            );
+
+            sleep(1);
+
+            if (!isAlive(camera_pid_)) {
+                throw std::runtime_error("camera publisher failed");
+            }
+
+            waitForTopics();
+
+            std::string session_name = "session_" + t;
+            last_session_path_ = recordings_dir_ + "/" + session_name;
+
+            record_pid_ = startCommandNoLog(
+                "gnome-terminal -- bash -lc '"
+                "source /opt/ros/humble/setup.bash && "
+                "source /home/jetson/ROS2-Visualization/install/setup.bash && "
+                "mkdir -p /home/jetson/ROS2-Visualization/recordings && "
+                "cd /home/jetson/ROS2-Visualization/recordings && "
+                "ros2 bag record -o " + session_name + " "
+                "/lidar_points "
+                "/camera_image/compressed "
+                "/map_points; "
+                "exec bash'"
             );
 
             sleep(2);
 
-            if (!isProcessAlive(bag_pid_)) {
-                throw std::runtime_error("bag play failed");
-            }
-
-          
-            pointcloud_pid_ = startCommand(
-                ros_setup +
-                "ros2 run pointcloud_publisher pointcloud_publisher_node"
-            );
-
-            sleep(1);
-
-          
-            camera_pid_ = startCommand(
-                ros_setup +
-                "ros2 run pointcloud_publisher camera_publisher_node "
-                "--ros-args -p input_topic:=" + camera_input_topic_
-            );
-
-            sleep(1);
-
-          
-            std::string session = "session_" + getTimestamp();
-
-            std::string record_cmd =
-                ros_setup +
-                "mkdir -p " + recordings_dir_ + " && "
-                "ros2 bag record -o " + recordings_dir_ + "/" + session + " "
-                "/lidar_points /camera_image/compressed";
-
-            record_pid_ = startCommand(record_cmd);
-
-            sleep(1);
-
-            if (!isProcessAlive(record_pid_)) {
-                throw std::runtime_error("record failed");
+            if (!isAlive(record_pid_)) {
+                throw std::runtime_error("rosbag record terminal failed");
             }
 
             state_ = "running";
             publishStatus();
 
             response->success = true;
-            response->message = "Started";
+            response->message = "Started recording with map_builder";
 
         } catch (const std::exception & e) {
             stopAllProcesses();
+
             state_ = "error";
             publishStatus();
 
             response->success = false;
             response->message = e.what();
+
+            RCLCPP_ERROR(this->get_logger(), "%s", e.what());
         }
     }
-
-
 
     void stopCallback(
         const std::shared_ptr<std_srvs::srv::Trigger::Request>,
@@ -260,14 +391,16 @@ private:
 
         stopAllProcesses();
 
+        sleep(2);
+
+        reindexLastBag();
+
         state_ = "stopped";
         publishStatus();
 
         response->success = true;
-        response->message = "Stopped";
+        response->message = "Stopped and reindexed";
     }
-
-
 
     void listCallback(
         const std::shared_ptr<std_srvs::srv::Trigger::Request>,
@@ -297,16 +430,16 @@ private:
         }
     }
 
-
-
     std::string state_;
-    std::string bag_path_;
     std::string camera_input_topic_;
+    std::string imu_input_topic_;
     std::string recordings_dir_;
+    std::string logs_dir_;
+    std::string last_session_path_;
 
-    pid_t bag_pid_;
     pid_t pointcloud_pid_;
     pid_t camera_pid_;
+    pid_t map_builder_pid_;
     pid_t record_pid_;
 
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr status_pub_;
@@ -315,12 +448,15 @@ private:
     rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr list_service_;
 };
 
-
 int main(int argc, char ** argv)
 {
     rclcpp::init(argc, argv);
+
     auto node = std::make_shared<SystemController>();
+
     rclcpp::spin(node);
+
     rclcpp::shutdown();
+
     return 0;
 }

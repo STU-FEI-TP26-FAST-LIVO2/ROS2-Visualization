@@ -23,10 +23,10 @@ public:
       imu_received_(false)
     {
         input_cloud_topic_ = this->declare_parameter<std::string>(
-            "input_cloud_topic", "/lidar_points");
+            "input_cloud_topic", "/cloud_registered");
 
         input_imu_topic_ = this->declare_parameter<std::string>(
-            "input_imu_topic", "/alphasense/imu");
+            "input_imu_topic", "/imu");
 
         output_map_topic_ = this->declare_parameter<std::string>(
             "output_map_topic", "/map_points");
@@ -110,93 +110,93 @@ private:
             return;
         }
 
-        pcl::PointCloud<pcl::PointXYZI>::Ptr filtered_input(new pcl::PointCloud<pcl::PointXYZI>());
-        {
-            pcl::VoxelGrid<pcl::PointXYZI> voxel_filter;
-            voxel_filter.setInputCloud(input_cloud);
-            voxel_filter.setLeafSize(
-                static_cast<float>(input_leaf_size_),
-                static_cast<float>(input_leaf_size_),
-                static_cast<float>(input_leaf_size_));
-            voxel_filter.filter(*filtered_input);
-        }
+        // pcl::PointCloud<pcl::PointXYZI>::Ptr filtered_input(new pcl::PointCloud<pcl::PointXYZI>());
+        // {
+        //     pcl::VoxelGrid<pcl::PointXYZI> voxel_filter;
+        //     voxel_filter.setInputCloud(input_cloud);
+        //     voxel_filter.setLeafSize(
+        //         static_cast<float>(input_leaf_size_),
+        //         static_cast<float>(input_leaf_size_),
+        //         static_cast<float>(input_leaf_size_));
+        //     voxel_filter.filter(*filtered_input);
+        // }
 
-        Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();
-        transform.block<3, 3>(0, 0) = latest_orientation_.toRotationMatrix();
+        // Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();
+        // transform.block<3, 3>(0, 0) = latest_orientation_.toRotationMatrix();
 
-        pcl::PointCloud<pcl::PointXYZI>::Ptr rotated_cloud(new pcl::PointCloud<pcl::PointXYZI>());
-        pcl::transformPointCloud(*filtered_input, *rotated_cloud, transform);
+        // pcl::PointCloud<pcl::PointXYZI>::Ptr rotated_cloud(new pcl::PointCloud<pcl::PointXYZI>());
+        // pcl::transformPointCloud(*filtered_input, *rotated_cloud, transform);
 
-        if (!has_previous_) {
+        // if (!has_previous_) {
 
-            // prvý scan
-            *global_map_ += *rotated_cloud;
-            *previous_cloud_ = *rotated_cloud;
-            has_previous_ = true;
+        //     // prvý scan
+            *global_map_ += *input_cloud;
+        //     *previous_cloud_ = *rotated_cloud;
+        //     has_previous_ = true;
 
-        } else {
+        // } else {
 
-            if (global_map_->points.size() < 1000) {
+        //     if (global_map_->points.size() < 1000) {
 
-                *global_map_ += *rotated_cloud;
-                return;
-            }
+        //         *global_map_ += *rotated_cloud;
+        //         return;
+        //     }
 
-            pcl::IterativeClosestPoint<
-                pcl::PointXYZI,
-                pcl::PointXYZI> icp;
+        //     pcl::IterativeClosestPoint<
+        //         pcl::PointXYZI,
+        //         pcl::PointXYZI> icp;
 
-            icp.setInputSource(rotated_cloud);
-            icp.setInputTarget(global_map_);
+        //     icp.setInputSource(rotated_cloud);
+        //     icp.setInputTarget(global_map_);
 
-            icp.setMaximumIterations(30);
-            icp.setMaxCorrespondenceDistance(1.0);
+        //     icp.setMaximumIterations(30);
+        //     icp.setMaxCorrespondenceDistance(1.0);
 
-            icp.setTransformationEpsilon(1e-6);
-            icp.setEuclideanFitnessEpsilon(1e-6);
+        //     icp.setTransformationEpsilon(1e-6);
+        //     icp.setEuclideanFitnessEpsilon(1e-6);
 
-            // použitie IMU ako initial guess
-            Eigen::Matrix4f initial_guess =
-                Eigen::Matrix4f::Identity();
+        //     // použitie IMU ako initial guess
+        //     Eigen::Matrix4f initial_guess =
+        //         Eigen::Matrix4f::Identity();
 
-            initial_guess.block<3,3>(0,0) =
-                latest_orientation_.toRotationMatrix();
+        //     initial_guess.block<3,3>(0,0) =
+        //         latest_orientation_.toRotationMatrix();
 
-            pcl::PointCloud<pcl::PointXYZI> aligned_cloud;
+        //     pcl::PointCloud<pcl::PointXYZI> aligned_cloud;
 
-            icp.align(aligned_cloud, initial_guess);
+        //     icp.align(aligned_cloud, initial_guess);
 
-            if (icp.hasConverged()) {
+        //     if (icp.hasConverged()) {
 
-                *global_map_ += aligned_cloud;
+        //         *global_map_ += aligned_cloud;
 
-            } else {
+        //     } else {
 
-                RCLCPP_WARN(
-                    this->get_logger(),
-                    "ICP did not converge");
+        //         RCLCPP_WARN(
+        //             this->get_logger(),
+        //             "ICP did not converge");
 
-            }
-        }
+        //     }
+        // }
 
-        if (static_cast<int>(global_map_->points.size()) > max_points_before_filter_) {
-            pcl::PointCloud<pcl::PointXYZI>::Ptr filtered_map(new pcl::PointCloud<pcl::PointXYZI>());
+        // if (static_cast<int>(global_map_->points.size()) > max_points_before_filter_) {
+        //     pcl::PointCloud<pcl::PointXYZI>::Ptr filtered_map(new pcl::PointCloud<pcl::PointXYZI>());
 
-            pcl::VoxelGrid<pcl::PointXYZI> map_filter;
-            map_filter.setInputCloud(global_map_);
-            map_filter.setLeafSize(
-                static_cast<float>(map_leaf_size_),
-                static_cast<float>(map_leaf_size_),
-                static_cast<float>(map_leaf_size_));
-            map_filter.filter(*filtered_map);
+        //     pcl::VoxelGrid<pcl::PointXYZI> map_filter;
+        //     map_filter.setInputCloud(global_map_);
+        //     map_filter.setLeafSize(
+        //         static_cast<float>(map_leaf_size_),
+        //         static_cast<float>(map_leaf_size_),
+        //         static_cast<float>(map_leaf_size_));
+        //     map_filter.filter(*filtered_map);
 
-            global_map_ = filtered_map;
+        //     global_map_ = filtered_map;
 
-            RCLCPP_INFO(
-                this->get_logger(),
-                "Map voxel filtered, current points: %zu",
-                global_map_->points.size());
-        }
+        //     RCLCPP_INFO(
+        //         this->get_logger(),
+        //         "Map voxel filtered, current points: %zu",
+        //         global_map_->points.size());
+        // }
 
         sensor_msgs::msg::PointCloud2 output_cloud;
         pcl::toROSMsg(*global_map_, output_cloud);
