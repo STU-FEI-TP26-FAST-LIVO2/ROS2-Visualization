@@ -16,10 +16,10 @@ public:
     : Node("pointcloud_publisher")
     {
         publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
-            "/lidar_points", 10);
+            "/lidar", 10);
 
         subscription_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-            "/map",
+            "/lidar_points",
             10,
             std::bind(&PointCloudPublisher::pointCloudCallback, this, std::placeholders::_1));
 

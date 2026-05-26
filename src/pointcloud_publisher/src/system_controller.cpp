@@ -43,7 +43,7 @@ public:
 
         run_all_script_ = this->declare_parameter<std::string>(
             "run_all_script",
-            "/home/jetson/run_all.sh");
+            "/home/jetson/run_all_fixed.sh");
 
         logs_dir_ = recordings_dir_ + "/controller_logs";
 
