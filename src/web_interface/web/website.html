@@ -1062,6 +1062,65 @@ function decodePointCloud2(message) {
   return points;
 }
 
+function decodePointCloud2WithRGB(message) {
+  if (!message.data || !message.fields || !message.point_step) {
+    return { positions: [], colors: [] };
+  }
+
+  const xOffset = getFieldOffset(message.fields, "x");
+  const yOffset = getFieldOffset(message.fields, "y");
+  const zOffset = getFieldOffset(message.fields, "z");
+  const rgbOffset = getFieldOffset(message.fields, "rgb");
+
+  if (xOffset === null || yOffset === null || zOffset === null) {
+    return { positions: [], colors: [] };
+  }
+
+  let rawData;
+
+  if (typeof message.data === "string") {
+    const binary = atob(message.data);
+    rawData = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      rawData[i] = binary.charCodeAt(i);
+    }
+  } else {
+    rawData = new Uint8Array(message.data);
+  }
+
+  const dv = new DataView(rawData.buffer);
+
+  const positions = [];
+  const colors = [];
+
+  for (let i = 0; i + message.point_step <= rawData.length; i += message.point_step) {
+    const x = dv.getFloat32(i + xOffset, true);
+    const y = dv.getFloat32(i + yOffset, true);
+    const z = dv.getFloat32(i + zOffset, true);
+
+    if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) {
+      continue;
+    }
+
+    positions.push(x, z, -y);
+
+    if (rgbOffset !== null) {
+      // PointCloud2 rgb je FLOAT32, ale reálne sú v ňom zabalené bajty farby.
+      // Pri little-endian PCL býva poradie v pamäti: B, G, R, A.
+      const b = rawData[i + rgbOffset + 0] / 255.0;
+      const g = rawData[i + rgbOffset + 1] / 255.0;
+      const r = rawData[i + rgbOffset + 2] / 255.0;
+
+      colors.push(r, g, b);
+    } else {
+      // fallback farba, keby rgb field neexistoval
+      colors.push(0.0, 1.0, 0.5);
+    }
+  }
+
+  return { positions, colors };
+}
+
 /* LIDAR VIEWER */
 
 const viewer = document.getElementById("viewer");
@@ -1317,7 +1376,7 @@ lidarTopic.subscribe(function(message) {
   updateStatus();
 });
 
-/* MAP subscriber */
+/* MAP subscriber with RGB */
 
 const mapTopic = new ROSLIB.Topic({
   ros: ros,
@@ -1326,20 +1385,29 @@ const mapTopic = new ROSLIB.Topic({
 });
 
 mapTopic.subscribe(function(message) {
-  const points = decodePointCloud2(message);
+  const decoded = decodePointCloud2WithRGB(message);
+  const points = decoded.positions;
+  const colors = decoded.colors;
 
   if (points.length === 0) {
     return;
   }
 
   const geometry = new THREE.BufferGeometry();
+
   geometry.setAttribute(
     'position',
     new THREE.Float32BufferAttribute(points, 3)
   );
 
+  geometry.setAttribute(
+    'color',
+    new THREE.Float32BufferAttribute(colors, 3)
+  );
+
   const material = new THREE.PointsMaterial({
-    size: 0.04
+    size: 0.04,
+    vertexColors: true
   });
 
   const cloud = new THREE.Points(geometry, material);

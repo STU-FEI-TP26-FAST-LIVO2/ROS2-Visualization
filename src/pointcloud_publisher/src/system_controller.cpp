@@ -361,14 +361,19 @@ private:
             }
 
             map_builder_pid_ = startCommandWithLog(
-                ros +
-                "ros2 run pointcloud_publisher map_builder_node "
-                "--ros-args "
-                "-p input_cloud_topic:=/cloud_registered "
-                "-p input_imu_topic:=\"" + imu_input_topic_ + "\" "
-                "-p output_map_topic:=/map_points",
-                logs_dir_ + "/map_builder_" + t + ".log"
-            );
+    ros +
+    "ros2 run pointcloud_publisher map_builder_node "
+    "--ros-args "
+    "-p input_cloud_topic:=/cloud_registered "
+    "-p input_imu_topic:=\"" + imu_input_topic_ + "\" "
+    "-p output_map_topic:=/map_points "
+    "-p input_leaf_size:=0.05 "
+    "-p map_leaf_size:=0.07 "
+    "-p web_leaf_size:=0.15 "
+    "-p max_points_before_filter:=150000 "
+    "-p publish_period_ms:=1000",
+    logs_dir_ + "/map_builder_" + t + ".log"
+);
 
             sleep(1);
 
