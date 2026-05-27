@@ -84,7 +84,4 @@ ros2 run pointcloud_publisher system_controller_node
 ---
 
 
-
----
-
 AGX Orin.
