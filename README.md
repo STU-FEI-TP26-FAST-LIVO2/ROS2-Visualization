@@ -114,10 +114,10 @@ Uzol zabezpečuje komunikáciu medzi webovým rozhraním a ROS2 systémom.
 | Téma / Servis      | Typ               | Smer      |
 | ------------------ | ----------------- | --------- |
 | `/ui/status`       | `std_msgs/String` | Publikuje |
-| `/start_system`    | Service           | Poskytuje |
-| `/stop_system`     | Service           | Poskytuje |
-| `/list_recordings` | Service           | Poskytuje |
-| `/run_all`         | Service           | Poskytuje |
+| `/start_system`    | Servis            | Poskytuje |
+| `/stop_system`     | Servis            | Poskytuje |
+| `/list_recordings` | Servis            | Poskytuje |
+| `/run_all`         | Servis            | Poskytuje |
 
 ---
 
