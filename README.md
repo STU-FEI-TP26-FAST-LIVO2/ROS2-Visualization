@@ -1,3 +1,32 @@
+ROS2 Vizualizačné Webové Rozhranie
+
+V tejto časti sa zameriava na vytvorenie webového vizualizačného rozhrania pre robotický systém využívajúci ROS2. Cieľom je umožniť zobrazovanie dát zo senzorov a mapovania prostredia priamo vo webovom prehliadači v reálnom čase.
+
+Systém umožňuje:
+
+- vizualizáciu LiDAR dát,
+- zobrazenie kamery robota,
+- vizualizáciu mapy prostredia,
+- komunikáciu medzi ROS2 a webovým rozhraním pomocou WebSocketu,
+ovládanie a monitoring systému cez webové rozhranie.
+
+Projekt pozostáva z backendovej a frontendovej časti.
+
+Architektúra systému
+ROS2 Nodes
+   │
+   ├── LiDAR
+   ├── Kamera
+   ├── IMU
+   └── Mapovací node
+           │
+           ▼
+    rosbridge WebSocket
+           │
+           ▼
+     Webové rozhranie 
+
+
 # 1. Spustenie rosbridge servera
 
 Webová aplikácia komunikuje s ROS2 pomocou `rosbridge_server`.
