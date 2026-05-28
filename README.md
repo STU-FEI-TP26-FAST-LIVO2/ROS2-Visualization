@@ -26,7 +26,7 @@ graph TD
     C[IMU]
     D[Mapa]
 
-    A --> E[ROS2 Nodes]
+    A --> E[ROS2 Uzly]
     B --> E
     C --> E
     D --> E
@@ -66,58 +66,58 @@ Webová stránka bude dostupná na: `http://localhost:8000`.
 V prípade prístupu z iného zariadenia v sieti (cez JETSON_ORIN): `http://10.42.0.1:8000`.
 
 ---
-# 3. Spustenie node system_controller
+# 3. Spustenie uzlu system_controller
 
 ```bash
 ros2 run pointcloud_publisher system_controller_node
 ```
 
-# 4. ROS2 Topics
+# 4. ROS2 témy
 
-## PointCloud Publisher Node
+## PointCloud Publisher uzol
 
-Node slúži na spracovanie LiDAR dát a ich publikovanie pre webové rozhranie.
+Uzol slúži na spracovanie LiDAR dát a ich publikovanie pre webové rozhranie.
 
-| Topic           | ROS2 Message Type         | Direction  |
+| Téma            | Typ ROS2 správy           | Smer       |
 | --------------- | ------------------------- | ---------- |
-| `/lidar_points` | `sensor_msgs/PointCloud2` | Subscribes |
-| `/lidar`        | `sensor_msgs/PointCloud2` | Publishes  |
+| `/lidar_points` | `sensor_msgs/PointCloud2` | Odoberá    |
+| `/lidar`        | `sensor_msgs/PointCloud2` | Publikuje  |
 
 ---
 
-## Camera Publisher Node
+## Camera Publisher uzol
 
-Node zabezpečuje prijímanie obrazu z kamery a jeho kompresiu pre webový prenos.
+Uzol zabezpečuje prijímanie obrazu z kamery a jeho kompresiu pre webový prenos.
 
-| Topic                      | ROS2 Message Type             | Direction  |
+| Téma                       | Typ ROS2 správy               | Smer       |
 | -------------------------- | ----------------------------- | ---------- |
-| `/rgb_img`                 | `sensor_msgs/Image`           | Subscribes |
-| `/camera_image/compressed` | `sensor_msgs/CompressedImage` | Publishes  |
+| `/rgb_img`                 | `sensor_msgs/Image`           | Odoberá    |
+| `/camera_image/compressed` | `sensor_msgs/CompressedImage` | Publikuje  |
 
 ---
 
-## Map Builder Node
+## Map Builder uzol
 
-Node vytvára globálnu mapu prostredia pomocou LiDAR dát a IMU senzora.
+Uzol vytvára globálnu mapu prostredia pomocou LiDAR dát a IMU senzora.
 
-| Topic               | ROS2 Message Type         | Direction  |
+| Téma                | Typ ROS2 správy           | Smer       |
 | ------------------- | ------------------------- | ---------- |
-| `/cloud_registered` | `sensor_msgs/PointCloud2` | Subscribes |
-| `/map_points`       | `sensor_msgs/PointCloud2` | Publishes  |
+| `/cloud_registered` | `sensor_msgs/PointCloud2` | Odoberá    |
+| `/map_points`       | `sensor_msgs/PointCloud2` | Publikuje  |
 
 ---
 
-## System Controller Node
+## System Controller uzol
 
-Node zabezpečuje komunikáciu medzi webovým rozhraním a ROS2 systémom.
+Uzol zabezpečuje komunikáciu medzi webovým rozhraním a ROS2 systémom.
 
-| Topic / Service    | Type              | Direction |
+| Téma / Servis      | Typ               | Smer      |
 | ------------------ | ----------------- | --------- |
-| `/ui/status`       | `std_msgs/String` | Publishes |
-| `/start_system`    | Service           | Provides  |
-| `/stop_system`     | Service           | Provides  |
-| `/list_recordings` | Service           | Provides  |
-| `/run_all`         | Service           | Provides  |
+| `/ui/status`       | `std_msgs/String` | Publikuje |
+| `/start_system`    | Service           | Poskytuje |
+| `/stop_system`     | Service           | Poskytuje |
+| `/list_recordings` | Service           | Poskytuje |
+| `/run_all`         | Service           | Poskytuje |
 
 ---
 
