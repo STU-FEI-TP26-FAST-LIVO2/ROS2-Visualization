@@ -1,4 +1,4 @@
-### ROS2 Vizualizačné Webové Rozhranie
+## ROS2 Vizualizačné Webové Rozhranie
 
 V tejto časti sa zameriava na vytvorenie webového vizualizačného rozhrania pre robotický systém využívajúci ROS2. Cieľom je umožniť zobrazovanie dát zo senzorov a mapovanie prostredia priamo vo webovom prehliadači v reálnom čase.
 
