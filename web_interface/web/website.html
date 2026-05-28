@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>ROS2 Visualizer</title>
+  <script src="roslib.min.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #1e1e1e;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    /* Header */
+    header {
+      background-color: #111;
+      padding: 15px 20px;
+      font-size: 20px;
+      font-weight: bold;
+      border-bottom: 1px solid #333;
+    }
+
+    /* Main layout */
+    .container {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 250px;
+      background-color: #161616;
+      border-right: 1px solid #333;
+      padding: 15px;
+    }
+
+    /* Main view area */
+    .main-view {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 15px;
+    }
+
+    .view-window {
+      flex: 1;
+      background-color: #000;
+      border: 1px solid #333;
+      border-radius: 4px;
+      padding: 10px;
+      overflow: auto;
+    }
+
+    pre {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-size: 14px;
+      color: #00ff88;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <h1 style="text-align:center;">Multisenzorická odometrická vizualizácia</h1>
+  </header>
+
+  <div class="container">
+
+    <div class="sidebar">
+      <h3>Menu</h3>
+    </div>
+
+    <div class="main-view">
+      <h3>PointCloud View</h3>
+
+      <div class="view-window">
+        <pre id="output">Čakám na dáta...</pre>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    var ros = new ROSLIB.Ros({
+      url: 'ws://localhost:9090'
+    });
+
+    ros.on('connection', function() {
+      console.log('Connected to rosbridge');
+    });
+
+    ros.on('error', function(error) {
+      console.log('Connection error:', error);
+    });
+
+    var listener = new ROSLIB.Topic({
+      ros: ros,
+      name: '/chatter',
+      messageType: 'std_msgs/msg/String'
+    });
+
+    listener.subscribe(function(message) {
+      document.getElementById('output').textContent = message.data;
+    });
+  </script>
+
+</body>
+</html>
