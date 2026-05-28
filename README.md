@@ -116,6 +116,3 @@ ros2 run pointcloud_publisher system_controller_node
 | `/run_all` | service |
 
 ---
-
-
-AGX Orin.
