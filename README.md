@@ -20,7 +20,7 @@ graph TD
     A[LiDAR]
     B[Kamera]
     C[IMU]
-    D[Mapovací node]
+    D[Mapa]
 
     A --> E[ROS2 Nodes]
     B --> E
