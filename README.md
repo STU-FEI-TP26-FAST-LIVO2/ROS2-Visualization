@@ -76,43 +76,54 @@ http://10.42.0.1:8000
 ```bash
 ros2 run pointcloud_publisher system_controller_node
 ```
-# 5. ROS2 topicy
 
-## Pointcloud publisher
 
-| Topic | Typ |
-|---|---|
-| `/lidar_points` | subscribe |
-| `/lidar` | publish |
+# 5. ROS2 Topics
 
----
+## PointCloud Publisher Node
 
-## Camera publisher
+Node slúži na spracovanie LiDAR dát a ich publikovanie pre webové rozhranie.
 
-| Topic | Typ |
-|---|---|
-| `/rgb_img` | subscribe |
-| `/camera_image/compressed` | publish |
+| Topic           | ROS2 Message Type         | Direction  |
+| --------------- | ------------------------- | ---------- |
+| `/lidar_points` | `sensor_msgs/PointCloud2` | Subscribes |
+| `/lidar`        | `sensor_msgs/PointCloud2` | Publishes  |
 
 ---
 
-## Map builder
+## Camera Publisher Node
 
-| Topic | Typ |
-|---|---|
-| `/cloud_registered` | subscribe |
-| `/map_points` | publish |
+Node zabezpečuje prijímanie obrazu z kamery a jeho kompresiu pre webový prenos.
+
+| Topic                      | ROS2 Message Type             | Direction  |
+| -------------------------- | ----------------------------- | ---------- |
+| `/rgb_img`                 | `sensor_msgs/Image`           | Subscribes |
+| `/camera_image/compressed` | `sensor_msgs/CompressedImage` | Publishes  |
+
+---
+
+## Map Builder Node
+
+Node vytvára globálnu mapu prostredia pomocou LiDAR dát a IMU senzora.
+
+| Topic               | ROS2 Message Type         | Direction  |
+| ------------------- | ------------------------- | ---------- |
+| `/cloud_registered` | `sensor_msgs/PointCloud2` | Subscribes |
+| `/map_points`       | `sensor_msgs/PointCloud2` | Publishes  |
 
 ---
 
-## System controller
+## System Controller Node
 
-| Topic / Service | Typ |
-|---|---|
-| `/ui/status` | publish |
-| `/start_system` | service |
-| `/stop_system` | service |
-| `/list_recordings` | service |
-| `/run_all` | service |
+Node zabezpečuje komunikáciu medzi webovým rozhraním a ROS2 systémom.
+
+| Topic / Service    | Type              | Direction |
+| ------------------ | ----------------- | --------- |
+| `/ui/status`       | `std_msgs/String` | Publishes |
+| `/start_system`    | Service           | Provides  |
+| `/stop_system`     | Service           | Provides  |
+| `/list_recordings` | Service           | Provides  |
+| `/run_all`         | Service           | Provides  |
 
 ---
+
