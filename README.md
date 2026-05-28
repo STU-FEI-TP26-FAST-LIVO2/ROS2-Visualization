@@ -12,19 +12,24 @@ ovládanie a monitoring systému cez webové rozhranie.
 
 Projekt pozostáva z backendovej a frontendovej časti.
 
-Architektúra systému
-ROS2 Nodes
-   │
-   ├── LiDAR
-   ├── Kamera
-   ├── IMU
-   └── Mapovací node
-           │
-           ▼
-    rosbridge WebSocket
-           │
-           ▼
-     Webové rozhranie 
+## Architektúra systému
+
+```mermaid
+graph TD
+
+    A[LiDAR]
+    B[Kamera]
+    C[IMU]
+    D[Mapovací node]
+
+    A --> E[ROS2 Nodes]
+    B --> E
+    C --> E
+    D --> E
+
+    E --> F[rosbridge WebSocket]
+    F --> G[Webové rozhranie]
+```
 
 
 # 1. Spustenie rosbridge servera
